@@ -118,7 +118,7 @@ pipeline {
             archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
             archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
             dir("kite-deploy") {
-                withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME'), string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
                     sh """
                         ansible-playbook -v -i inventory -e cloud_platform=esxi remove.yaml
                     """
