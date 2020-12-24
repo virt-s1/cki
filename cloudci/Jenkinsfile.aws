@@ -1,0 +1,123 @@
+pipeline {
+    agent {
+        node {
+            label 'container-fedora-33-prod'
+        }
+    }
+    stages {
+         stage("only run x86_64 kernel") {
+             steps {
+                 script {
+                     print env.CI_MESSAGE
+                     def object = new groovy.json.JsonSlurperClassic().parseText(env.CI_MESSAGE)
+
+                     def buildType = "master"
+                     def non_x86_64_patch = 0
+
+                     // To filter patch build which only has non_x86_64 patch, but has x86_64 kernel build
+                     if (object.modified_files != []) {
+                         buildType = "patch"
+                         object.modified_files.each {
+                             if (it.indexOf("arch/powerpc") == 0 || it.indexOf("arch/s390") == 0 || it.indexOf("arch/arm64") == 0 || it.indexOf("arch/openrisc") == 0){
+                                 non_x86_64_patch++
+                             }
+                         }
+                     }
+
+                     env.PIPELINE_ID = object.pipelineid
+
+                     println non_x86_64_patch
+                     println object.modified_files.size()
+
+                     if (buildType == "master" || object.modified_files.size() != non_x86_64_patch) {
+                         object.build_info.each {
+                             if (it.architecture == 'x86_64') {
+                                 env.KERNEL_URL = it.kernel_package_url
+                             }
+                         }
+                         env.KERNEL_NVR = env.KERNEL_URL.split('/')[-1]
+                         currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}"
+                         sh('printenv')
+                     } else {
+                         currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}"
+                         currentBuild.result = "ABORTED"
+                         error('Stopping non x86_64 patch build')
+                     }
+                 }
+             }
+         }
+         stage("download kernel") {
+             steps {
+                 sh """
+                     ansible-playbook -v -i inventory -e cki_repo_url=${env.KERNEL_URL} download.yaml
+                 """
+             }
+         }
+         stage("deploy ec2 instance") {
+             steps {
+                 checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
+                 dir("kite-deploy") {
+                     withCredentials([string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY'), string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_KEY')]) {
+                         sh """
+                             ansible-playbook -v -i inventory -e cloud_platform=aws deploy.yaml
+                         """
+                     }
+                 }
+             }
+         }
+         stage("setup") {
+             steps {
+                 sh """
+                     ansible-playbook -v -i inventory setup.yaml
+                 """
+             }
+         }
+         stage("install kernel") {
+             steps {
+                 sh """
+                     ansible-playbook -v -i inventory install.yaml
+                 """
+             }
+         }
+         stage("run ltp test") {
+             steps {
+                 sh """
+                     ansible-playbook -v -i inventory run-ltp.yaml
+                 """
+             }
+             post {
+                 always {
+                     withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+                         sh """
+                             ansible-playbook -v -i inventory -e cloud_platform=aws umb.yaml
+                         """
+                     }
+                 }
+             }
+         }
+    }
+    post {
+        always {
+            script {
+                env.jenkins_result = sh(returnStdout: true, script: "cat ltp.result")
+                print env.jenkins_result
+                switch (env.jenkins_result) {
+                    case 'PASS':
+                        currentBuild.result = "SUCCESS"
+                        break
+                    case 'FAIL':
+                        currentBuild.result = "FAILURE"
+                        break
+                }
+            }
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.result'
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.report'
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
+        }
+    }
+    options {
+        timestamps()
+        timeout(time: 2, unit: 'HOURS')
+    }
+}

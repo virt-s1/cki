@@ -19,11 +19,11 @@
 
     - name: get host info
       vmware_host_facts:
-        hostname: "{{ vsphere_server }}"
-        username: "{{ vsphere_username }}"
-        password: "{{ vsphere_password }}"
+        hostname: "{{ lookup('env', 'VSPHERE_SERVER') }}"
+        username: "{{ lookup('env', 'VSPHERE_USERNAME') }}"
+        password: "{{ lookup('env', 'VSPHERE_PASSWORD') }}"
         validate_certs: no
-        esxi_hostname: "{{ esxi_host }}"
+        esxi_hostname: "{{ lookup('env', 'ESXI_HOST') }}"
       register: host_facts
       when: cloud_platform == "esxi"
 
