@@ -61,7 +61,7 @@ pipeline {
                  dir("kite-deploy") {
                      withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME')]) {
                          sh """
-                             ansible-playbook -v -i inventory -e cloud_platform=esxi deploy.yaml
+                             ansible-playbook -v -i inventory -e cloud_platform=esxi -e esxi_firmware=\$FIRMWARE deploy.yaml
                          """
                      }
                  }
