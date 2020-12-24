@@ -75,6 +75,7 @@ pipeline {
          stage("install kernel") {
              steps {
                  sh """
+                     chmod 600 key/identity
                      ansible-playbook -v -i inventory install.yaml
                  """
              }
@@ -114,6 +115,13 @@ pipeline {
             archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.report'
             archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
             archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
+            dir("kite-deploy") {
+                withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+                    sh """
+                        ansible-playbook -v -i inventory -e cloud_platform=openstack remove.yaml
+                    """
+                }
+            }
         }
     }
     options {

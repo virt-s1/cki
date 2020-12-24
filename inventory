@@ -2,7 +2,6 @@
 localhost
 
 [guest]
-10.0.153.103
 
 [runner:vars]
 ansible_connection=local
