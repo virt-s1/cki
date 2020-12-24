@@ -1,0 +1,63 @@
+---
+- hosts: runner
+  gather_facts: no
+  become: no
+  vars:
+    # https://mojo.redhat.com/docs/DOC-1182793
+    broker01_ip: "messaging-devops-broker01.web.prod.ext.phx2.redhat.com"
+    broker02_ip: "messaging-devops-broker02.web.prod.ext.phx2.redhat.com"
+    stomp_port: 61612
+    ssl_cert_file: umb-sending-crt.crt
+    ssl_key_file: umb-sending-key.key
+    pipeline_id: "{{ lookup('env', 'PIPELINE_ID') }}"
+    log_url: "{{ lookup('env', 'BUILD_URL') }}console"
+
+  tasks:
+    - name: get test result
+      set_fact:
+        test_result: "{{ lookup('file', 'ltp.result') }}"
+
+    - name: get host info
+      vmware_host_facts:
+        hostname: "{{ vsphere_server }}"
+        username: "{{ vsphere_username }}"
+        password: "{{ vsphere_password }}"
+        validate_certs: no
+        esxi_hostname: "{{ esxi_host }}"
+      register: host_facts
+      when: cloud_platform == "esxi"
+
+    - name: set cloud info varaible
+      set_fact:
+        cloud_info: "{{ host_facts.ansible_facts.ansible_distribution }}-{{ host_facts.ansible_facts.ansible_distribution_version }}"
+      when: cloud_platform == "esxi"
+
+    - name: set cloud info variable
+      set_fact:
+        cloud_info: "AWS-EC2-{{ aws_region }}-{{ random_instance_type }}"
+      when: cloud_platform == "aws"
+
+    - name: set cloud info variable
+      set_fact:
+        cloud_info: "OpenStack"
+      when: cloud_platform == "openstack"
+
+    - name: set vault password file
+      copy:
+        content: "{{ lookup('env', 'VAULT_PASSWORD') }}"
+        dest: "~/.config/ansible-vault"
+
+    - name: they become real
+      command: ansible-vault decrypt -v --vault-password-file ~/.config/ansible-vault files/{{ item }} --output umb-{{ item }}.{{ item.split('-')[1] }}
+      loop:
+        - sending-crt
+        - sending-key
+
+    - name: send result from prod broker01
+      command: "{{ role_path }}/files/cki-send.py --broker={{ broker01_ip }} --port={{ stomp_port }} --ssl_cert_file={{ ssl_cert_file }} --ssl_key_file={{ ssl_key_file }} --pipeline_id={{ pipeline_id }} --arch=x86_64 --log_url={{ log_url }} --result={{ test_result }} --cloud=\"{{ cloud_info }}\""
+      register: send_from_broker01_result
+      ignore_errors: True
+
+    - name: broker01 is unreachable send result from prod broker02
+      command: "{{ role_path }}/files/cki-send.py --broker={{ broker02_ip }} --port={{ stomp_port }} --ssl_cert_file={{ ssl_cert_file }} --ssl_key_file={{ ssl_key_file }} --pipeline_id={{ pipeline_id }} --arch=x86_64 --log_url={{ log_url }} --result={{ test_result }} --cloud=\"{{ cloud_info }}\""
+      when: send_from_broker01_result is failed

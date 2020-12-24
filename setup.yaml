@@ -1,0 +1,19 @@
+---
+- hosts: runner
+  gather_facts: no
+  become: no
+
+  tasks:
+    - name: grep guest IP address
+      command: awk -F "=" '/guest_ip/ {print $2}' kite-deploy/inventory
+      register: result
+
+    - debug:
+        var: result.stdout
+
+    - name: add guest IP into guest group
+      ini_file:
+        path: "inventory"
+        section: guest
+        option: "{{ result.stdout }}"
+        allow_no_value: yes
