@@ -34,7 +34,7 @@
 
     - name: set cloud info variable
       set_fact:
-        cloud_info: "AWS-EC2-{{ aws_region }}-{{ random_instance_type }}"
+        cloud_info: "AWS-EC2-{{ lookup('env', 'AWS_REGION') }}-{{ lookup('file', 'kite-deploy/aws_instance_type') }}"
       when: cloud_platform == "aws"
 
     - name: set cloud info variable
