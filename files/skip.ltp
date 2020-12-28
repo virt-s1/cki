@@ -71,6 +71,7 @@ oom03
 oom04
 oom05
 swapping01
+ipneigh01_arp
 ftp
 rcp
 rlogin
@@ -87,6 +88,7 @@ if6-addr-adddel_ifconfig
 if6-addr-addlarge_ifconfig
 if6-mtu-change_ip
 if6-mtu-change_ifconfig
+clock_nanosleep02
 dnsmasq
 dhcpd6
 dnsmasq6
@@ -144,6 +146,7 @@ setreuid04_16
 setreuid05_16
 setreuid06_16
 setreuid07_16
+setrlimit06
 setuid01_16
 setuid03_16
 setuid04_16
@@ -157,3 +160,6 @@ utimensat01
 statx05
 statx07
 epoll_wait02
+nanosleep01
+pselect01
+pselect01_64
