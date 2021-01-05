@@ -164,3 +164,6 @@ epoll_wait02
 nanosleep01
 pselect01
 pselect01_64
+poll02
+select04
+futex_wait05
