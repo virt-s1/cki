@@ -167,3 +167,5 @@ pselect01_64
 poll02
 select04
 futex_wait05
+cpuhotplug05
+cpuhotplug06
