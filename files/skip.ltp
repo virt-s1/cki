@@ -170,3 +170,10 @@ futex_wait05
 cpuhotplug05
 cpuhotplug06
 madvise06
+hugemmap05
+host01
+getrandom02
+fanotify09
+fanotify10
+msgstress03
+semctl09
