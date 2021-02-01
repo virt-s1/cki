@@ -177,3 +177,5 @@ fanotify09
 fanotify10
 msgstress03
 semctl09
+syncfs01
+clock_gettime04
