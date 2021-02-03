@@ -85,15 +85,15 @@ pipeline {
                      ansible-playbook -v -i inventory run-ltp.yaml
                  """
              }
-             post {
-                 always {
-                     withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
-                         sh """
-                             ansible-playbook -v -i inventory -e cloud_platform=aws umb.yaml
-                         """
-                     }
-                 }
-             }
+             // post {
+             //     always {
+             //         withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+             //             sh """
+             //                 ansible-playbook -v -i inventory -e cloud_platform=aws umb.yaml
+             //             """
+             //         }
+             //     }
+             // }
          }
     }
     post {
