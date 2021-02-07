@@ -35,10 +35,8 @@ pipeline {
                                  env.KERNEL_URL = it.kernel_package_url
                              }
                          }
-                         int value = env.BUILD_NUMBER as Integer
-                         env.FIRMWARE = value % 2 ? "bios" : "efi"
                          env.KERNEL_NVR = env.KERNEL_URL.split('/')[-1]
-                         currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}-${env.FIRMWARE}"
+                         currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}"
                          sh('printenv')
                      } else {
                          currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}"
@@ -61,7 +59,7 @@ pipeline {
                  dir("kite-deploy") {
                      withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME')]) {
                          sh """
-                             ansible-playbook -v -i inventory -e cloud_platform=esxi -e esxi_firmware=\$FIRMWARE deploy.yaml
+                             ansible-playbook -v -i inventory -e cloud_platform=esxi deploy.yaml
                          """
                      }
                  }
@@ -88,15 +86,15 @@ pipeline {
                      ansible-playbook -v -i inventory run-ltp.yaml
                  """
              }
-             post {
-                 always {
-                     withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME'), string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
-                         sh """
-                             ansible-playbook -v -i inventory -e cloud_platform=esxi umb.yaml
-                         """
-                     }
-                 }
-             }
+             // post {
+             //     always {
+             //         withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME'), string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+             //             sh """
+             //                 ansible-playbook -v -i inventory -e cloud_platform=esxi umb.yaml
+             //             """
+             //         }
+             //     }
+             // }
          }
     }
     post {

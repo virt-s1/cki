@@ -1,7 +1,7 @@
 pipeline {
     agent {
         node {
-            label 'container-fedora-33-stage'
+            label 'container-fedora-33-prod'
         }
     }
     stages {
@@ -55,7 +55,7 @@ pipeline {
          }
          stage("deploy ec2 instance") {
              steps {
-                 checkout([$class: 'GitSCM', branches: [[name: '*/aarch64']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
+                 checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
                  dir("kite-deploy") {
                      withCredentials([string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY'), string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_KEY')]) {
                          sh """
