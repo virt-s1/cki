@@ -29,7 +29,7 @@
 
     - name: set cloud info varaible
       set_fact:
-        cloud_info: "{{ host_facts.ansible_facts.ansible_distribution }}-{{ host_facts.ansible_facts.ansible_distribution_version }}"
+        cloud_info: "{{ host_facts.ansible_facts.ansible_distribution }}-{{ host_facts.ansible_facts.ansible_distribution_version }}-{{ lookup('env', 'ESXI_FIRMWARE') }}"
       when: cloud_platform == "esxi"
 
     - name: set cloud info variable
