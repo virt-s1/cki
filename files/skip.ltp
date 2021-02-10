@@ -182,3 +182,7 @@ clock_gettime04
 fallocate06
 add_key05
 thp03
+timer_create01
+timer_delete01
+timer_settime01
+timer_settime02
