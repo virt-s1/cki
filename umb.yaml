@@ -39,6 +39,11 @@
 
     - name: set cloud info variable
       set_fact:
+        cloud_info: "GCP-{{ lookup('file', 'kite-deploy/gcp_instance_type') }}"
+      when: cloud_platform == "gcp"
+
+    - name: set cloud info variable
+      set_fact:
         cloud_info: "OpenStack"
       when: cloud_platform == "openstack"
 
