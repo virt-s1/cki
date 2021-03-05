@@ -6,19 +6,11 @@
   tasks:
     - name: set kernel nvr
       set_fact:
-        kernel_nvr: "{{ cki_repo_url.split('/raw/')[1].split('/')[-2] }}"
-
-    - name: set download url
-      set_fact:
-        cki_url: "{{ cki_repo_url.split('/raw/')[0] }}/download"
+        kernel_nvr: "{{ cki_repo_url.split('/')[-1] }}"
 
     - name: show kernel_nvr value
       debug:
         var: kernel_nvr
-
-    - name: show cki_url value
-      debug:
-        var: cki_url
 
     - name: add guest kernel_nvr into guest group
       ini_file:
@@ -28,38 +20,18 @@
         value: "{{ kernel_nvr }}"
         no_extra_spaces: yes
 
-    - name: download cki kernel artifacts
-      get_url:
-        url: "{{ cki_url }}"
-        dest: "{{ playbook_dir }}"
-        validate_certs: no
-
     - name: create tmp folder to save unarchived file and folder
       file:
-        path: "{{ playbook_dir }}/tmp"
+        path: "{{ playbook_dir }}/kernel"
         state: directory
 
-    - name: unzip cki artifacts
-      unarchive:
-        src: "{{ playbook_dir }}/artifacts.zip"
-        dest: "{{ playbook_dir }}/tmp/"
-
-    - name: "copy kernel, core, and modules into {{ playbook_dir }}"
-      copy:
-        src: "{{ playbook_dir }}/tmp/artifacts/repo/{{ kernel_nvr }}/{{ item }}"
-        dest: "{{ playbook_dir }}/kernel/"
+    - name: download cki kernel artifacts
+      get_url:
+        url: "{{ cki_repo_url }}/{{ item }}-{{ kernel_nvr }}.rpm"
+        dest: "{{ playbook_dir }}/kernel"
+        validate_certs: no
       with_items:
-        - "kernel-{{ kernel_nvr }}.rpm"
-        - "kernel-core-{{ kernel_nvr }}.rpm"
-        - "kernel-modules-{{ kernel_nvr }}.rpm"
-        - "kernel-modules-extra-{{ kernel_nvr }}.rpm"
-
-    - name: delete tmp folder
-      file:
-        path: "{{ playbook_dir }}/tmp"
-        state: absent
-
-    - name: delete artifacts.zip
-      file:
-        path: "{{ playbook_dir }}/artifacts.zip"
-        state: absent
+        - "kernel"
+        - "kernel-core"
+        - "kernel-modules"
+        - "kernel-modules-extra"
