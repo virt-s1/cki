@@ -6,7 +6,7 @@
   tasks:
     - name: set kernel nvr
       set_fact:
-        kernel_nvr: "{{ cki_repo_url.split('/')[-1] }}"
+        kernel_nvr: "{{ cki_repo_url.strip('/').split('/')[-1] }}"
 
     - name: show kernel_nvr value
       debug:
