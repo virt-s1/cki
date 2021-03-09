@@ -122,6 +122,7 @@ pipeline {
                         break
                 }
             }
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'kite-deploy/*.serial.log'
             archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.result'
             archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.report'
             archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
