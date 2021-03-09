@@ -32,8 +32,9 @@
 
         - name: aws check and save the progress of an instance using
           shell: aws --profile {{ aws_profile }} --region {{ aws_region }} ec2 get-console-output --instance-id {{ instance }} --output text > {{ instance }}.upgrade.serial.log
-          delegate_to: 127.0.0.1
+          delegate_to: localhost
           when: cloud_platform == "aws"
+          ignore_errors: True
 
     - name: get current kernel version
       shell: uname -r
