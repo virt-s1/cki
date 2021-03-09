@@ -26,6 +26,8 @@ pipeline {
 
                      env.PIPELINE_ID = object.pipelineid
 
+                     env.MR_NUM = object.merge_request_url.split('/')[-1]
+
                      println have_aarch64_patch
 
                      if (buildType == "master" || have_aarch64_patch) {
@@ -34,8 +36,14 @@ pipeline {
                                  env.KERNEL_URL = it.kernel_package_url
                              }
                          }
+
                          env.KERNEL_NVR = env.KERNEL_URL.split('/')[-1]
-                         currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}"
+
+                         if (buildType == "master") {
+                             currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}"
+                         } else {
+                             currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}-MR-${env.MR_NUM}"
+                         }
                          sh('printenv')
                      } else {
                          currentBuild.displayName = "${env.BUILD_NUMBER}-non_aarch64_build-${env.PIPELINE_ID}"
