@@ -75,8 +75,13 @@ pipeline {
              steps {
                  sh """
                      chmod 600 key/identity
-                     ansible-playbook -v -i inventory install.yaml
+                     ansible-playbook -v -i inventory -e cloud_platform=aws install.yaml
                  """
+             }
+             post {
+                 always {
+                     archiveArtifacts allowEmptyArchive: true, artifacts: 'kite-deploy/*.serial.log'
+                 }
              }
          }
          stage("run ltp test") {
@@ -87,6 +92,24 @@ pipeline {
              }
              post {
                  always {
+                     script {
+                         env.jenkins_result = sh(returnStdout: true, returnStatus: true, script: "cat ltp.result")
+                         print env.jenkins_result
+                         switch (env.jenkins_result) {
+                             case 'PASS':
+                                 currentBuild.result = "SUCCESS"
+                                 break
+                             case 'FAIL':
+                                 currentBuild.result = "FAILURE"
+                                 break
+                         }
+                     }
+
+                     archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.result'
+                     archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.report'
+                     archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
+                     archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
+
                      withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
                          sh """
                              ansible-playbook -v -i inventory -e cloud_platform=aws umb.yaml
@@ -98,22 +121,6 @@ pipeline {
     }
     post {
         always {
-            script {
-                env.jenkins_result = sh(returnStdout: true, script: "cat ltp.result")
-                print env.jenkins_result
-                switch (env.jenkins_result) {
-                    case 'PASS':
-                        currentBuild.result = "SUCCESS"
-                        break
-                    case 'FAIL':
-                        currentBuild.result = "FAILURE"
-                        break
-                }
-            }
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.result'
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.report'
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
             dir("kite-deploy") {
                 withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
                     sh """

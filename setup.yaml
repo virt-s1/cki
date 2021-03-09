@@ -25,9 +25,10 @@
     - debug:
         var: result_instance.stdout
 
-    - name: add instance id/name into guest group
+    - name: add instance id/name into guest group vars
       ini_file:
         path: "inventory"
-        section: guest
-        option: "{{ result_instance.stdout }}"
+        section: guest:vars
+        option: instance
+        value: "{{ result_instance.stdout }}"
         allow_no_value: yes

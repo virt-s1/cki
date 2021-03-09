@@ -1,5 +1,9 @@
 ---
 - hosts: guest
+  vars:
+    gcp_project: "{{ lookup('env', 'GCP_PROJECT') }}"
+    aws_region: "{{ lookup('env', 'AWS_REGION') }}"
+    aws_profile: "default"
 
   tasks:
     - name: copy kernel to guest
@@ -7,18 +11,29 @@
         src: "{{ playbook_dir }}/kernel"
         dest: "/home/admin"
 
-    - name: install kernel on guest
-      dnf:
-        name: "/home/admin/kernel/kernel-{{ kernel_nvr }}.rpm, /home/admin/kernel/kernel-core-{{ kernel_nvr }}.rpm, /home/admin/kernel/kernel-modules-{{ kernel_nvr }}.rpm, /home/admin/kernel/kernel-modules-extra-{{ kernel_nvr }}.rpm"
-        state: present
-        allow_downgrade: yes
-        disable_gpg_check: yes
-      become: yes
+    - block:
+        - name: install kernel on guest
+          dnf:
+            name: "/home/admin/kernel/kernel-{{ kernel_nvr }}.rpm, /home/admin/kernel/kernel-core-{{ kernel_nvr }}.rpm, /home/admin/kernel/kernel-modules-{{ kernel_nvr }}.rpm, /home/admin/kernel/kernel-modules-extra-{{ kernel_nvr }}.rpm"
+            state: present
+            allow_downgrade: yes
+            disable_gpg_check: yes
+          become: yes
 
-    - name: reboot guest for new kernel to make effect
-      reboot:
-        reboot_timeout: 1200
-      become: yes
+        - name: reboot guest for new kernel to make effect
+          reboot:
+            reboot_timeout: 1200
+          become: yes
+      always:
+        - name: gcp check and save the progress of an instance using
+          shell: gcloud compute instances get-serial-port-output {{ instance }} --zone=us-central1-a --project={{ gcp_project }} > {{ instance }}.upgrade.serial.log
+          delegate_to: 127.0.0.1
+          when: cloud_platform == "gcp"
+
+        - name: aws check and save the progress of an instance using
+          shell: aws --profile {{ aws_profile }} --region {{ aws_region }} ec2 get-console-output --instance-id {{ instance }} --output text > {{ instance }}.upgrade.serial.log
+          delegate_to: 127.0.0.1
+          when: cloud_platform == "aws"
 
     - name: get current kernel version
       shell: uname -r
