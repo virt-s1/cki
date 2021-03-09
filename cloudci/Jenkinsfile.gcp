@@ -35,6 +35,8 @@ pipeline {
 
                     env.PIPELINE_ID = object.pipelineid
 
+                    env.MR_NUM = object.merge_request_url.split('/')[-1]
+
                     println non_x86_64_patch
                     println object.modified_files.size()
 
@@ -45,10 +47,10 @@ pipeline {
                             }
                         }
                         env.KERNEL_NVR = env.KERNEL_URL.split('/')[-1]
-                        currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}"
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}-MR-${env.MR_NUM}"
                         sh('printenv')
                     } else {
-                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}"
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}-MR-${env.MR_NUM}"
                         currentBuild.result = "ABORTED"
                         error('Stopping non x86_64 patch build')
                     }
