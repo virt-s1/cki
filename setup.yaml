@@ -6,14 +6,28 @@
   tasks:
     - name: grep guest IP address
       command: awk -F "=" '/guest_ip/ {print $2}' kite-deploy/inventory
-      register: result
+      register: result_ip
 
     - debug:
-        var: result.stdout
+        var: result_ip.stdout
 
     - name: add guest IP into guest group
       ini_file:
         path: "inventory"
         section: guest
-        option: "{{ result.stdout }}"
+        option: "{{ result_ip.stdout }}"
+        allow_no_value: yes
+
+    - name: grep instance id/name
+      command: awk -F "=" '/instance/ {print $2}' kite-deploy/inventory
+      register: result_instance
+
+    - debug:
+        var: result_instance.stdout
+
+    - name: add instance id/name into guest group
+      ini_file:
+        path: "inventory"
+        section: guest
+        option: "{{ result_instance.stdout }}"
         allow_no_value: yes
