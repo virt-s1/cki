@@ -4,6 +4,10 @@
     gcp_project: "{{ lookup('env', 'GCP_PROJECT') }}"
     aws_region: "{{ lookup('env', 'AWS_REGION') }}"
     aws_profile: "default"
+    vsphere_server: "{{ lookup('env', 'VSPHERE_SERVER') }}"
+    vsphere_username: "{{ lookup('env', 'VSPHERE_USERNAME') }}"
+    vsphere_password: "{{ lookup('env', 'VSPHERE_PASSWORD') }}"
+    esxi_datacenter: "{{ lookup('env', 'ESXI_DATACENTER') }}"
 
   tasks:
     - name: copy kernel to guest
@@ -27,14 +31,27 @@
       always:
         - name: gcp check and save the progress of an instance using
           shell: gcloud compute instances get-serial-port-output {{ instance }} --zone=us-central1-a --project={{ gcp_project }} > {{ instance }}.upgrade.serial.log
-          delegate_to: 127.0.0.1
+          delegate_to: runner
           when: cloud_platform == "gcp"
+          ignore_errors: true
 
         - name: aws check and save the progress of an instance using
           shell: aws --profile {{ aws_profile }} --region {{ aws_region }} ec2 get-console-output --instance-id {{ instance }} --output text > {{ instance }}.upgrade.serial.log
-          delegate_to: localhost
+          delegate_to: runner
           when: cloud_platform == "aws"
-          ignore_errors: True
+          ignore_errors: true
+
+        - name: esxi take guest screenshoot
+          vmware_guest_screenshot:
+            hostname: "{{ vsphere_server }}"
+            username: "{{ vsphere_username }}"
+            password: "{{ vsphere_password }}"
+            datacenter: "{{ esxi_datacenter }}"
+            validate_certs: no
+            local_path: "{{ playbook_dir }}"
+          delegate_to: runner
+          when: cloud_platform == "esxi"
+          ignore_errors: true
 
     - name: get current kernel version
       shell: uname -r
