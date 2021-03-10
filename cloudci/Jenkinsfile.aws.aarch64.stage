@@ -92,7 +92,7 @@ pipeline {
              }
              post {
                  always {
-                     archiveArtifacts allowEmptyArchive: true, artifacts: 'kite-deploy/*.serial.log'
+                     archiveArtifacts allowEmptyArchive: true, artifacts: '*.serial.log'
                  }
              }
          }

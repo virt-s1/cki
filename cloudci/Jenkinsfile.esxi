@@ -91,6 +91,11 @@ pipeline {
                      ansible-playbook -v -i inventory -e cloud_platform=esxi install.yaml
                  """
              }
+            post {
+                always {
+                    archiveArtifacts allowEmptyArchive: true, artifacts: '*.png'
+                }
+            }
          }
          stage("run ltp test") {
              steps {
