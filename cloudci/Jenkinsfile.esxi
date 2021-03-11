@@ -86,10 +86,12 @@ pipeline {
          }
          stage("install kernel") {
              steps {
-                 sh """
-                     chmod 600 key/identity
-                     ansible-playbook -v -i inventory -e cloud_platform=esxi install.yaml
-                 """
+                 withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME')]) {
+                    sh """
+                        chmod 600 key/identity
+                        ansible-playbook -v -i inventory -e cloud_platform=esxi install.yaml
+                    """
+                 }
              }
              post {
                  always {
