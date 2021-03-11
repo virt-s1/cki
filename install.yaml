@@ -48,6 +48,7 @@
             password: "{{ vsphere_password }}"
             datacenter: "{{ esxi_datacenter }}"
             validate_certs: no
+            uuid: "{{ instance }}"
             local_path: "{{ playbook_dir }}"
           delegate_to: localhost
           when: cloud_platform == "esxi"
