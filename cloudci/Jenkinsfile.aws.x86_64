@@ -134,7 +134,7 @@ pipeline {
                                                 notifyFailure: true,
                                                 notifyNotBuilt: true,
                                                 notifySuccess: true,
-                                                url: "${env.GCN_URL}"
+                                                url: '${GCN_URL}'
                      }
                  }
              }
