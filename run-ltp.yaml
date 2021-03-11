@@ -24,30 +24,30 @@
       args:
         chdir: /opt/ltp/
       loop:
-        - hyperthreading
-        - cpuhotplug
+        # - hyperthreading
+        # - cpuhotplug
         - commands
-        - connectors
-        - crypto
-        - dio
-        - fcntl-locktests
-        - fs
-        - fs_bind
-        - fs_perms_simple
-        - fsx
-        - hugetlb
-        - input
-        - ipc
-        - math
-        - mm
-        - nptl
-        - power_management_tests
-        - sched
-        - syscalls
-        - uevent
-        - net.tcp_cmds
-        - net.ipv6
-        - net_stress.interface
+        # - connectors
+        # - crypto
+        # - dio
+        # - fcntl-locktests
+        # - fs
+        # - fs_bind
+        # - fs_perms_simple
+        # - fsx
+        # - hugetlb
+        # - input
+        # - ipc
+        # - math
+        # - mm
+        # - nptl
+        # - power_management_tests
+        # - sched
+        # - syscalls
+        # - uevent
+        # - net.tcp_cmds
+        # - net.ipv6
+        # - net_stress.interface
       register: ltp_results
       ignore_errors: True
 
