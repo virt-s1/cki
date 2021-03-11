@@ -48,6 +48,7 @@
             username: "{{ vsphere_username }}"
             password: "{{ vsphere_password }}"
             datacenter: "{{ esxi_datacenter }}"
+            uuid: "{{ instance }}"
             validate_certs: no
             uuid: "{{ instance }}"
             local_path: "{{ playbook_dir }}"
