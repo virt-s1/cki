@@ -1,7 +1,7 @@
 pipeline {
     agent {
         node {
-            label 'container-fedora-33-prod'
+            label 'container-fedora-33-stage'
         }
     }
     stages {
@@ -122,13 +122,13 @@ pipeline {
                      archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
                      archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
 
-                     withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
-                         sh """
-                             ansible-playbook -v -i inventory -e cloud_platform=aws umb.yaml
-                         """
-                     }
+                     // withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+                     //     sh """
+                     //         ansible-playbook -v -i inventory -e cloud_platform=aws umb.yaml
+                     //     """
+                     // }
                      withCredentials([string(credentialsId: 'google-chat-notification-url', variable: 'GCN_URL')]) {
-                         googlechatnotification message: "${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nInstance: AWS(ARM) [${env.AWS_INSTANCE_TYPE}]\nResult: ${env.jenkins_result}\nConsole Log: ${env.BUILD_URL}console",
+                         googlechatnotification message: "Stage Debugging\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nInstance: AWS(ARM) [${env.AWS_INSTANCE_TYPE}]\nResult: ${env.jenkins_result}\nConsole Log: ${env.BUILD_URL}console",
                                                 notifyAborted: true,
                                                 notifyFailure: true,
                                                 notifyNotBuilt: true,
