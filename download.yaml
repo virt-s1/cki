@@ -2,6 +2,8 @@
 - hosts: runner
   gather_facts: no
   become: no
+  vars:
+    home_folder: "{{ lookup('env', 'HOME') }}"
 
   tasks:
     - name: set kernel nvr
@@ -12,23 +14,18 @@
       debug:
         var: kernel_nvr
 
-    - name: add guest kernel_nvr into guest group
-      ini_file:
-        path: "inventory"
-        section: guest:vars
-        option: kernel_nvr
-        value: "{{ kernel_nvr }}"
-        no_extra_spaces: yes
+    - set_fact:
+        kernel_folder: "{{ home_folder }}/downloads/{{ kernel_nvr }}"
 
     - name: create tmp folder to save unarchived file and folder
       file:
-        path: "{{ playbook_dir }}/kernel"
+        path: "{{ kernel_folder }}"
         state: directory
 
     - name: download cki kernel artifacts
       get_url:
         url: "{{ cki_repo_url }}/{{ item }}-{{ kernel_nvr }}.rpm"
-        dest: "{{ playbook_dir }}/kernel"
+        dest: "{{ kernel_folder }}"
         validate_certs: no
       with_items:
         - "kernel"
