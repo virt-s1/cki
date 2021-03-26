@@ -1,15 +1,16 @@
 pipeline {
-    agent {
-        node {
-            label 'container-fedora-33-stage'
-        }
+    agent { label 'container-fedora-33-stage' }
+    environment {
+        ARCH = "x86_64"
+        GCN_URL = credentials('google-chat-notification-url')
     }
-    environment { ARCH = "x86_64" }
     stages {
         stage("x86_64 only") {
             steps {
                 script {
                     print env.CI_MESSAGE
+                    // we need aborted_result file
+                    sh "echo 'FALSE' > aborted_result"
                     def object = new groovy.json.JsonSlurperClassic().parseText(env.CI_MESSAGE)
 
                     def buildType = "master"
@@ -50,9 +51,10 @@ pipeline {
                             currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}-MR-${env.MR_NUM}"
                         }
 
-                        sh('printenv')
+                        sh "printenv"
                     } else {
                         currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}-MR-${env.MR_NUM}"
+                        sh "echo 'ABORTED' > aborted_result"
                         currentBuild.result = "ABORTED"
                         error('Stopping non x86_64 patch build')
                     }
@@ -62,6 +64,11 @@ pipeline {
         stage("download") {
             steps {
                 download()
+            }
+            post {
+                unsuccessful {
+                    sh "echo 'ABORTED' > aborted_result"
+                }
             }
         }
         stage("testing") {
@@ -79,10 +86,26 @@ pipeline {
                             steps {
                                 deploy()
                             }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
                         }
                         stage("setup") {
                             steps {
                                 setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
                             }
                         }
                         stage("install") {
@@ -91,7 +114,13 @@ pipeline {
                             }
                             post {
                                 always {
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: '*.serial.log'
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
                                 }
                             }
                         }
@@ -101,24 +130,8 @@ pipeline {
                             }
                             post {
                                 always {
-                                    script {
-                                        env.jenkins_result = sh(returnStdout: true, script: "cat ltp.result")
-                                        print env.jenkins_result
-                                        switch (env.jenkins_result) {
-                                            case 'PASS':
-                                                currentBuild.result = "SUCCESS"
-                                                break
-                                            case 'FAIL':
-                                                currentBuild.result = "FAILURE"
-                                                break
-                                        }
-                                    }
-
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.result'
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.report'
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
-
+                                    set_test_result()
+                                    preserve_logs("result")
                                     remove()
                                 }
                             }
@@ -138,10 +151,26 @@ pipeline {
                             steps {
                                 deploy()
                             }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
                         }
                         stage("setup") {
                             steps {
                                 setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
                             }
                         }
                         stage("install") {
@@ -150,7 +179,13 @@ pipeline {
                             }
                             post {
                                 always {
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: '*.serial.log'
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
                                 }
                             }
                         }
@@ -160,24 +195,203 @@ pipeline {
                             }
                             post {
                                 always {
-                                    script {
-                                        env.jenkins_result = sh(returnStdout: true, script: "cat ltp.result")
-                                        print env.jenkins_result
-                                        switch (env.jenkins_result) {
-                                            case 'PASS':
-                                                currentBuild.result = "SUCCESS"
-                                                break
-                                            case 'FAIL':
-                                                currentBuild.result = "FAILURE"
-                                                break
-                                        }
-                                    }
-
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.result'
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: 'ltp.report'
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
-
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("n1") {
+                    agent { label "container-fedora-33-stage" }
+                    environment { GCP_INSTANCE_TYPE = "n1-standard-2" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("e2") {
+                    agent { label "container-fedora-33-stage" }
+                    environment { GCP_INSTANCE_TYPE = "e2-standard-2" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("c2") {
+                    agent { label "container-fedora-33-stage" }
+                    environment { GCP_INSTANCE_TYPE = "c2-standard-4" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
                                     remove()
                                 }
                             }
@@ -189,7 +403,38 @@ pipeline {
     }
     post {
         always {
-            sh "rm -rf \$HOME/downloads/${env.KERNEL_NVR}"
+            script {
+                env.ABORTED_RESULT = sh(returnStdout: true, script: "cat aborted_result").trim()
+                if (env.ABORTED_RESULT != 'ABORTED') {
+                    // clear kernel
+                    sh "rm -rf \$HOME/downloads/${env.KERNEL_NVR}"
+                    // let's aggregate result
+                    unstash 'n2d-standard-2-result'
+                    unstash 'n2-standard-2-result'
+                    unstash 'n1-standard-2-result'
+                    unstash 'e2-standard-2-result'
+                    unstash 'c2-standard-4-result'
+
+                    withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
+                        sh """
+                            ./cki-send.py --pipeline_id=${env.PIPELINE_ID} --build_url=${env.BUILD_URL} --cloud=GCP --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY}
+                        """
+                    }
+                    googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: GCP\nConsole Log: ${env.BUILD_URL}display/redirect",
+                                            notifyAborted: true,
+                                            notifyFailure: true,
+                                            notifyNotBuilt: true,
+                                            notifySuccess: true,
+                                            url: "${env.GCN_URL}"
+                } else {
+                    googlechatnotification message: "ABORTED!\n${env.KERNEL_NVR}\nInstance: GCP [${env.GCP_INSTANCE_TYPE}]\nConsole Log: ${env.BUILD_URL}display/redirect",
+                                            notifyAborted: true,
+                                            notifyFailure: true,
+                                            notifyNotBuilt: true,
+                                            notifySuccess: true,
+                                            url: "${env.GCN_URL}"
+                }
+            }
         }
     }
     options {
@@ -198,9 +443,28 @@ pipeline {
     }
 }
 
+// set ABORT result
+void set_abort() {
+    sh "echo 'ABORT' > ${GCP_INSTANCE_TYPE}.${ARCH}.result"
+    stash includes: "${GCP_INSTANCE_TYPE}.${ARCH}.result", name: "${GCP_INSTANCE_TYPE}-result"
+}
+
+// set test result
+void set_test_result() {
+    sh """
+        if [ -f ltp.result ]; then
+            mv ltp.result ${GCP_INSTANCE_TYPE}.${ARCH}.result
+        else
+            echo 'ABORT' > ${GCP_INSTANCE_TYPE}.${ARCH}.result
+        fi
+    """
+    stash includes: "${GCP_INSTANCE_TYPE}.${ARCH}.result", name: "${GCP_INSTANCE_TYPE}-result"
+}
+
 // prepare running environment
 void prepare() {
     sh """
+        id
         while true; do
             test -f /usr/bin/gcloud && break
         done
@@ -254,5 +518,21 @@ void remove() {
         withCredentials([string(credentialsId: 'gcp-project', variable: 'GCP_PROJECT'), string(credentialsId: 'gcp-service-account-name', variable: 'GCP_SERVICE_ACCOUNT_NAME'), file(credentialsId: 'gcp-service-account-file', variable: 'GCP_SERVICE_ACCOUNT_FILE')]) {
             sh "ansible-playbook -v -i inventory -e cloud_platform=gcp remove.yaml"
         }
+    }
+}
+
+// archive logs
+void preserve_logs(log_type) {
+    // archive console/serial output
+    if (log_type == "console") {
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*.serial.log'
+    }
+
+    // archive test report and logs
+    if (log_type == "result") {
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*.result'
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*ltp.report'
+        archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
+        archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
     }
 }
