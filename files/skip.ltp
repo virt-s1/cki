@@ -186,3 +186,5 @@ timer_create01
 timer_delete01
 timer_settime01
 timer_settime02
+chown04
+chown04_16
