@@ -1,0 +1,344 @@
+pipeline {
+    agent { label 'container-fedora-33-stage' }
+    environment {
+        ARCH = "x86_64"
+        GCN_URL = credentials('google-chat-notification-url')
+        VSPHERE_SERVER = "10.73.73.245"
+        ESXI_HOST = "10.16.209.80"
+        ESXI_DATACENTER = "Datacenter7.0"
+        ESXI_DATASTORE = "datastore-80"
+    }
+    stages {
+        stage("x86_64 only") {
+            steps {
+                script {
+                    print env.CI_MESSAGE
+                    // we need aborted_result file
+                    sh "echo 'FALSE' > aborted_result"
+                    def object = new groovy.json.JsonSlurperClassic().parseText(env.CI_MESSAGE)
+
+                    def buildType = "master"
+                    def non_x86_64_patch = 0
+
+                    // To filter patch build which only has non_x86_64 patch, but has x86_64 kernel build
+                    if (object.modified_files != []) {
+                        buildType = "patch"
+                        object.modified_files.each {
+                            if (it.indexOf("arch/powerpc") == 0 || it.indexOf("arch/s390") == 0 || it.indexOf("arch/arm64") == 0 || it.indexOf("arch/openrisc") == 0){
+                                non_x86_64_patch++
+                            }
+                        }
+                    }
+
+                    env.PIPELINE_ID = object.pipelineid
+
+                    env.MR_URL = object.merge_request_url
+                    env.MR_NUM = object.merge_request_url.split('/')[-1]
+
+                    println non_x86_64_patch
+                    println object.modified_files.size()
+
+                    if (buildType == "master" || object.modified_files.size() != non_x86_64_patch) {
+                        object.build_info.each {
+                            if (it.architecture == 'x86_64') {
+                                env.KERNEL_URL = it.kernel_package_url
+                            }
+                        }
+
+                        env.KERNEL_NVR = env.KERNEL_URL.split('/')[-1]
+
+                        if (buildType == "master") {
+                            env.GCN_INFO = "Master"
+                            currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}"
+                        } else {
+                            env.GCN_INFO = "Merge Request: ${env.MR_URL}"
+                            currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}-MR-${env.MR_NUM}"
+                        }
+
+                        sh "printenv"
+                    } else {
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}-MR-${env.MR_NUM}"
+                        sh "echo 'ABORTED' > aborted_result"
+                        currentBuild.result = "ABORTED"
+                        error('Stopping non x86_64 patch build')
+                    }
+                }
+            }
+        }
+        stage("download") {
+            steps {
+                download()
+            }
+            post {
+                unsuccessful {
+                    sh "echo 'ABORTED' > aborted_result"
+                }
+            }
+        }
+        stage("testing") {
+            parallel {
+                stage("ESXi7-BIOS") {
+                    agent { label "container-fedora-33-stage" }
+                    environment { ESXI_FIRMWARE = "bios" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("ESXi7-UEFI") {
+                    agent { label "container-fedora-33-stage" }
+                    environment { ESXI_FIRMWARE = "efi" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                env.ABORTED_RESULT = sh(returnStdout: true, script: "cat aborted_result").trim()
+                if (env.ABORTED_RESULT != 'ABORTED') {
+                    // clear kernel
+                    sh "rm -rf \$HOME/downloads/${env.KERNEL_NVR}"
+                    // let's aggregate result
+                    unstash 'bios-result'
+                    unstash 'efi-result'
+
+                    withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
+                        sh """
+                            ./cki-send.py --pipeline_id=${env.PIPELINE_ID} --build_url=${env.BUILD_URL} --cloud=ESXi-7.0 --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY}
+                        """
+                    }
+                    googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: ESXi-7.0\nConsole Log: ${env.BUILD_URL}display/redirect",
+                                            notifyAborted: true,
+                                            notifyFailure: true,
+                                            notifyNotBuilt: true,
+                                            notifySuccess: true,
+                                            url: "${env.GCN_URL}"
+                } else {
+                    googlechatnotification message: "ABORTED!\n${env.KERNEL_NVR}\nInstance: ESXi-7.0 [${ESXI_FIRMWARE}]\nConsole Log: ${env.BUILD_URL}display/redirect",
+                                            notifyAborted: true,
+                                            notifyFailure: true,
+                                            notifyNotBuilt: true,
+                                            notifySuccess: true,
+                                            url: "${env.GCN_URL}"
+                }
+            }
+        }
+    }
+    options {
+        timestamps()
+        timeout(time: 2, unit: 'HOURS')
+    }
+}
+
+// set ABORT result
+void set_abort() {
+    sh "echo 'ABORT' > ${ESXI_FIRMWARE}.${ARCH}.result"
+    stash includes: "${ESXI_FIRMWARE}.${ARCH}.result", name: "${ESXI_FIRMWARE}-result"
+}
+
+// set test result
+void set_test_result() {
+    sh """
+        if [ -f ltp.result ]; then
+            mv ltp.result ${ESXI_FIRMWARE}.${ARCH}.result
+        else
+            echo 'ABORT' > ${ESXI_FIRMWARE}.${ARCH}.result
+        fi
+    """
+    stash includes: "${ESXI_FIRMWARE}.${ARCH}.result", name: "${ESXI_FIRMWARE}-result"
+}
+
+// prepare running environment
+void prepare() {
+    sh """
+        id
+        while true; do
+            test -f /usr/bin/gcloud && break
+        done
+    """
+}
+
+// deploy esxi instance
+void deploy() {
+    checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
+    dir("kite-deploy") {
+        withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME')]) {
+            sh "ansible-playbook -v -i inventory -e cloud_platform=esxi deploy.yaml"
+        }
+    }
+}
+
+// download kernel rpms
+void download() {
+    sh """
+        ansible-playbook -v -i inventory -e cki_repo_url=${env.KERNEL_URL} download.yaml
+        cat inventory
+    """
+}
+
+// a lot of setup things
+void setup() {
+    sh """
+        ansible-playbook -v -i inventory setup.yaml
+        cat inventory
+    """
+}
+
+// install kernel
+void install() {
+    withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME')]) {
+        sh """
+            chmod 600 key/identity
+            ansible-playbook -v -i inventory -e cloud_platform=esxi -e kernel_nvr=${env.KERNEL_NVR} -e kernel_folder=${env.HOME}/downloads/${env.KERNEL_NVR} install.yaml
+        """
+    }
+}
+
+// run ltp test
+void run_test() {
+    sh "ansible-playbook -v -i inventory run-ltp.yaml"
+}
+
+// clear esxi instance
+void remove() {
+    dir("kite-deploy") {
+        withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME'), string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+            sh "ansible-playbook -v -i inventory -e cloud_platform=esxi remove.yaml"
+        }
+    }
+}
+
+// archive logs
+void preserve_logs(log_type) {
+    // archive console/serial output
+    if (log_type == "console") {
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*.serial.log'
+    }
+
+    // archive test report and logs
+    if (log_type == "result") {
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*.result'
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*ltp.report'
+        archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
+        archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
+    }
+}
