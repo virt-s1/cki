@@ -1,0 +1,264 @@
+pipeline {
+    agent { label 'container-fedora-33-stage' }
+    environment {
+        ARCH = "x86_64"
+    }
+    stages {
+        stage("x86_64 only") {
+            steps {
+                script {
+                    print env.CI_MESSAGE
+                    // we need aborted_result file
+                    sh "echo 'FALSE' > aborted_result"
+                    def object = new groovy.json.JsonSlurperClassic().parseText(env.CI_MESSAGE)
+
+                    def buildType = "master"
+                    def non_x86_64_patch = 0
+
+                    // To filter patch build which only has non_x86_64 patch, but has x86_64 kernel build
+                    if (object.modified_files != []) {
+                        buildType = "patch"
+                        object.modified_files.each {
+                            if (it.indexOf("arch/powerpc") == 0 || it.indexOf("arch/s390") == 0 || it.indexOf("arch/arm64") == 0 || it.indexOf("arch/openrisc") == 0){
+                                non_x86_64_patch++
+                            }
+                        }
+                    }
+
+                    env.PIPELINE_ID = object.pipelineid
+
+                    env.MR_URL = object.merge_request_url
+                    env.MR_NUM = object.merge_request_url.split('/')[-1]
+
+                    println non_x86_64_patch
+                    println object.modified_files.size()
+
+                    if (buildType == "master" || object.modified_files.size() != non_x86_64_patch) {
+                        object.build_info.each {
+                            if (it.architecture == 'x86_64') {
+                                env.KERNEL_URL = it.kernel_package_url
+                            }
+                        }
+
+                        env.KERNEL_NVR = env.KERNEL_URL.split('/')[-1]
+
+                        if (buildType == "master") {
+                            env.GCN_INFO = "Master"
+                            currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}"
+                        } else {
+                            env.GCN_INFO = "Merge Request: ${env.MR_URL}"
+                            currentBuild.displayName = "${env.BUILD_NUMBER}-${buildType}-${env.KERNEL_NVR}-MR-${env.MR_NUM}"
+                        }
+
+                        sh "printenv"
+                    } else {
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}-MR-${env.MR_NUM}"
+                        sh "echo 'ABORTED' > aborted_result"
+                        currentBuild.result = "ABORTED"
+                        error('Stopping non x86_64 patch build')
+                    }
+                }
+            }
+        }
+        stage("download") {
+            steps {
+                download()
+            }
+            post {
+                unsuccessful {
+                    sh "echo 'ABORTED' > aborted_result"
+                }
+            }
+        }
+        stage("testing") {
+            parallel {
+                stage("m1.L") {
+                    agent { label "container-fedora-33-stage" }
+                    environment { OS_INSTANCE_TYPE = "m1.large" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                env.ABORTED_RESULT = sh(returnStdout: true, script: "cat aborted_result").trim()
+                if (env.ABORTED_RESULT != 'ABORTED') {
+                    // clear kernel
+                    sh "rm -rf \$HOME/downloads/${env.KERNEL_NVR}"
+
+                    googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: OpenStack\nConsole Log: ${env.BUILD_URL}display/redirect",
+                                            notifyAborted: true,
+                                            notifyFailure: true,
+                                            notifyNotBuilt: true,
+                                            notifySuccess: true,
+                                            url: "${env.GCN_URL}"
+                } else {
+                    googlechatnotification message: "ABORTED!\n${env.KERNEL_NVR}\nCloud: OpenStack\nConsole Log: ${env.BUILD_URL}display/redirect",
+                                            notifyAborted: true,
+                                            notifyFailure: true,
+                                            notifyNotBuilt: true,
+                                            notifySuccess: true,
+                                            url: "${env.GCN_URL}"
+                }
+            }
+        }
+    }
+    options {
+        timestamps()
+        timeout(time: 2, unit: 'HOURS')
+    }
+}
+
+// set ABORT result
+void set_abort() {
+    sh "echo 'ABORT' > ${OS_INSTANCE_TYPE}.${ARCH}.result"
+    stash includes: "${OS_INSTANCE_TYPE}.${ARCH}.result", name: "${OS_INSTANCE_TYPE}-result"
+}
+
+// set test result
+void set_test_result() {
+    sh """
+        if [ -f ltp.result ]; then
+            mv ltp.result ${OS_INSTANCE_TYPE}.${ARCH}.result
+        else
+            echo 'ABORT' > ${OS_INSTANCE_TYPE}.${ARCH}.result
+        fi
+    """
+    stash includes: "${OS_INSTANCE_TYPE}.${ARCH}.result", name: "${OS_INSTANCE_TYPE}-result"
+}
+
+// prepare running environment
+void prepare() {
+    sh """
+        id
+        while true; do
+            test -f /usr/bin/gcloud && break
+        done
+    """
+}
+
+// deploy esxi instance
+void deploy() {
+    checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
+    dir("kite-deploy") {
+        withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+            sh "ansible-playbook -v -i inventory -e cloud_platform=openstack deploy.yaml"
+        }
+    }
+}
+
+// download kernel rpms
+void download() {
+    sh """
+        ansible-playbook -v -i inventory -e cki_repo_url=${env.KERNEL_URL} download.yaml
+        cat inventory
+    """
+}
+
+// a lot of setup things
+void setup() {
+    sh """
+        ansible-playbook -v -i inventory setup.yaml
+        cat inventory
+    """
+}
+
+// install kernel
+void install() {
+    sh """
+        chmod 600 key/identity
+        ansible-playbook -v -i inventory -e cloud_platform=openstack -e kernel_nvr=${env.KERNEL_NVR} -e kernel_folder=${env.HOME}/downloads/${env.KERNEL_NVR} install.yaml
+    """
+}
+
+// run ltp test
+void run_test() {
+    sh "ansible-playbook -v -i inventory run-ltp.yaml"
+}
+
+// clear esxi instance
+void remove() {
+    dir("kite-deploy") {
+        withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+            sh "ansible-playbook -v -i inventory -e cloud_platform=openstack remove.yaml"
+        }
+    }
+}
+
+// archive logs
+void preserve_logs(log_type) {
+    // archive console/serial output
+    if (log_type == "console") {
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*.serial.log'
+    }
+
+    // archive test report and logs
+    if (log_type == "result") {
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*.result'
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*ltp.report'
+        archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
+        archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
+    }
+}

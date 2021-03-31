@@ -44,6 +44,9 @@ def main(args):
     instances = [pathlib.PurePath(x).name.split(".")[:-1] for x in files]
     print(instances)
 
+    if args.cloud == "AWS-EC2":
+        instances = [(".".join(x[:2]), x[2]) for x in instances]
+
     for (x, y) in instances:
         filename = f"{x}.{y}.result"
         result = pathlib.Path(running_path / filename ).read_text().strip()

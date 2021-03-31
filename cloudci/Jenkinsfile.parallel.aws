@@ -1,0 +1,887 @@
+pipeline {
+    agent { label 'container-fedora-33-stage' }
+    environment {
+        AWS_REGION = "us-east-1"
+        GCN_URL = credentials('google-chat-notification-url')
+    }
+    stages {
+        stage("x86_64/arm64 only") {
+            steps {
+                script {
+                    print env.CI_MESSAGE
+                    // we need aborted_result file
+                    sh "echo 'FALSE' > aborted_result"
+                    def object = new groovy.json.JsonSlurperClassic().parseText(env.CI_MESSAGE)
+
+                    env.BUILD_TYPE = "master"
+                    def non_x86_64_patch = 0
+                    env.ARM64_PATCH = "false"
+                    env.X86_64_PATCH = "false"
+
+                    // To filter patch build which only has non_x86_64 patch, but has x86_64 kernel build
+                    if (object.modified_files != []) {
+                        env.BUILD_TYPE = "patch"
+                        object.modified_files.each {
+                            if (it.indexOf("arch/powerpc") == 0 || it.indexOf("arch/s390") == 0 || it.indexOf("arch/arm64") == 0 || it.indexOf("arch/openrisc") == 0 || it.indexOf("arch/h8300") == 0 || it.indexOf("arch/microblaze") == 0){
+                                non_x86_64_patch++
+                            }
+                            if (it.indexOf("arch/arm64") == 0) {
+                                env.ARM64_PATCH = "true"
+                            }
+                        }
+                    }
+
+                    println env.ARM64_PATCH
+                    println non_x86_64_patch
+                    println object.modified_files.size()
+
+                    if (object.modified_files.size() != non_x86_64_patch) {
+                        env.X86_64_PATCH = "true"
+                    }
+
+                    env.PIPELINE_ID = object.pipelineid
+
+                    env.MR_URL = object.merge_request_url
+                    env.MR_NUM = object.merge_request_url.split('/')[-1]
+                    println env.MR_NUM
+                    println env.BUILD_TYPE
+                    println env.ARM64_PATCH
+                    println env.X86_64_PATCH
+
+                    if (env.BUILD_TYPE == "master" || env.ARM64_PATCH || env.X86_64_PATCH) {
+                        object.build_info.each {
+                            if (it.architecture == 'x86_64') {
+                                env.X86_64_KERNEL_URL = it.kernel_package_url
+                                env.X86_64_KERNEL_NVR = it.kernel_package_url.split('/')[-1]
+                            }
+                            if (it.architecture == 'aarch64') {
+                                env.ARM64_KERNEL_URL = it.kernel_package_url
+                                env.ARM64_KERNEL_NVR = it.kernel_package_url.split('/')[-1]
+                            }
+                        }
+                        println env.X86_64_KERNEL_NVR
+                        println env.X86_64_KERNEL_URL
+
+                        if (env.BUILD_TYPE == "master") {
+                            env.KERNEL_NVR = env.X86_64_KERNEL_NVR.replace('.x86_64', '')
+
+                            env.GCN_INFO = "Master"
+                        } else {
+                            if (env.ARM64_PATCH == "true" && env.X86_64_PATCH == "true") {
+                                env.KERNEL_NVR = env.X86_64_KERNEL_NVR.replace('.x86_64', '')
+                            } else if (env.X86_64_PATCH == "true") {
+                                env.KERNEL_NVR = env.X86_64_KERNEL_NVR
+                            } else {
+                                    env.KERNEL_NVR = env.ARM64_KERNEL_NVR
+                            }
+
+                            env.GCN_INFO = "Merge Request: ${env.MR_URL}"
+                        }
+                        println env.GCN_INFO
+                        println env.KERNEL_NVR
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-${env.BUILD_TYPE}-${env.KERNEL_NVR}"
+
+                        sh "printenv"
+                    } else {
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_or_arm64_patch-${env.PIPELINE_ID}-MR-${env.MR_NUM}"
+                        sh "echo 'ABORTED' > aborted_result"
+                        currentBuild.result = "ABORTED"
+                        error('Stopping non x86_64 or arm64 patch build')
+                    }
+                }
+            }
+        }
+        stage("download") {
+            steps {
+                script {
+                    if (env.BUILD_TYPE == "master") {
+                        println "download master"
+                        download("${env.X86_64_KERNEL_URL}")
+                        download("${env.ARM64_KERNEL_URL}")
+                    }
+                    if (env.X86_64_PATCH == "true") {
+                        println "download x86_64 patch"
+                        download("${env.X86_64_KERNEL_URL}")
+                    }
+                    if (env.ARM64_PATCH == "true") {
+                        println "download arm64 patch"
+                        download("${env.ARM64_KERNEL_URL}")
+                    }
+                }
+            }
+            post {
+                unsuccessful {
+                    sh "echo 'ABORTED' > aborted_result"
+                }
+            }
+        }
+        stage("testing") {
+            parallel {
+                stage("t2.M") {
+                    when {
+                        beforeAgent true
+                        anyOf {
+                            environment name: 'BUILD_TYPE', value: 'master'
+                            environment name: 'X86_64_PATCH', value: 'true'
+                        }
+                    }
+                    agent { label "container-fedora-33-stage" }
+                    environment {
+                        AWS_INSTANCE_TYPE = "t2.medium"
+                        ARCH = "x86_64"
+                    }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install("${env.X86_64_KERNEL_NVR}")
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("t3a.M") {
+                    when {
+                        beforeAgent true
+                        anyOf {
+                            environment name: 'BUILD_TYPE', value: 'master'
+                            environment name: 'X86_64_PATCH', value: 'true'
+                        }
+                    }
+                    agent { label "container-fedora-33-stage" }
+                    environment {
+                        AWS_INSTANCE_TYPE = "t3a.medium"
+                        ARCH = "x86_64"
+                    }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install("${env.X86_64_KERNEL_NVR}")
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("m4.L") {
+                    when {
+                        beforeAgent true
+                        anyOf {
+                            environment name: 'BUILD_TYPE', value: 'master'
+                            environment name: 'X86_64_PATCH', value: 'true'
+                        }
+                    }
+                    agent { label "container-fedora-33-stage" }
+                    environment {
+                        AWS_INSTANCE_TYPE = "m4.large"
+                        ARCH = "x86_64"
+                    }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install("${env.X86_64_KERNEL_NVR}")
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("m5.L") {
+                    when {
+                        beforeAgent true
+                        anyOf {
+                            environment name: 'BUILD_TYPE', value: 'master'
+                            environment name: 'X86_64_PATCH', value: 'true'
+                        }
+                    }
+                    agent { label "container-fedora-33-stage" }
+                    environment {
+                        AWS_INSTANCE_TYPE = "m5.large"
+                        ARCH = "x86_64"
+                    }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install("${env.X86_64_KERNEL_NVR}")
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("m5dn.L") {
+                    when {
+                        beforeAgent true
+                        anyOf {
+                            environment name: 'BUILD_TYPE', value: 'master'
+                            environment name: 'X86_64_PATCH', value: 'true'
+                        }
+                    }
+                    agent { label "container-fedora-33-stage" }
+                    environment {
+                        AWS_INSTANCE_TYPE = "m5dn.large"
+                        ARCH = "x86_64"
+                    }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install("${env.X86_64_KERNEL_NVR}")
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("t4g.M") {
+                    when {
+                        beforeAgent true
+                        anyOf {
+                            environment name: 'BUILD_TYPE', value: 'master'
+                            environment name: 'ARM64_PATCH', value: 'true'
+                        }
+                    }
+                    agent { label "container-fedora-33-stage" }
+                    environment {
+                        AWS_INSTANCE_TYPE = "t4g.medium"
+                        ARCH = "aarch64"
+                    }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install("${env.ARM64_KERNEL_NVR}")
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("m6gd.L") {
+                    when {
+                        beforeAgent true
+                        anyOf {
+                            environment name: 'BUILD_TYPE', value: 'master'
+                            environment name: 'ARM64_PATCH', value: 'true'
+                        }
+                    }
+                    agent { label "container-fedora-33-stage" }
+                    environment {
+                        AWS_INSTANCE_TYPE = "m6gd.large"
+                        ARCH = "aarch64"
+                    }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install("${env.ARM64_KERNEL_NVR}")
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("a1.L") {
+                    when {
+                        beforeAgent true
+                        anyOf {
+                            environment name: 'BUILD_TYPE', value: 'master'
+                            environment name: 'ARM64_PATCH', value: 'true'
+                        }
+                    }
+                    agent { label "container-fedora-33-stage" }
+                    environment {
+                        AWS_INSTANCE_TYPE = "a1.large"
+                        ARCH = "aarch64"
+                    }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install("${env.ARM64_KERNEL_NVR}")
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                }
+                                aborted {
+                                    set_abort()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                env.ABORTED_RESULT = sh(returnStdout: true, script: "cat aborted_result").trim()
+                if (env.ABORTED_RESULT != 'ABORTED') {
+                    // let's aggregate result
+                    if (env.BUILD_TYPE == "master") {
+                        // clear kernel
+                        sh "rm -rf \$HOME/downloads/${env.X86_64_KERNEL_NVR}"
+                        sh "rm -rf \$HOME/downloads/${env.ARM64_KERNEL_NVR}"
+                        unstash 't2.medium-result'
+                        unstash 't3a.medium-result'
+                        unstash 'm4.large-result'
+                        unstash 'm5.large-result'
+                        unstash 'm5dn.large-result'
+                        unstash 't4g.medium-result'
+                        unstash 'm6gd.large-result'
+                        unstash 'a1.large-result'
+                    } else if (env.X86_64_PATCH == "true" && env.ARM64_PATCH == "true") {
+                        // clear kernel
+                        sh "rm -rf \$HOME/downloads/${env.X86_64_KERNEL_NVR}"
+                        sh "rm -rf \$HOME/downloads/${env.ARM64_KERNEL_NVR}"
+                        unstash 't2.medium-result'
+                        unstash 't3a.medium-result'
+                        unstash 'm4.large-result'
+                        unstash 'm5.large-result'
+                        unstash 'm5dn.large-result'
+                        unstash 't4g.medium-result'
+                        unstash 'm6gd.large-result'
+                        unstash 'a1.large-result'
+                    } else if (env.X86_64_PATCH == "true") {
+                        // clear kernel
+                        sh "rm -rf \$HOME/downloads/${env.X86_64_KERNEL_NVR}"
+                        unstash 't2.medium-result'
+                        unstash 't3a.medium-result'
+                        unstash 'm4.large-result'
+                        unstash 'm5.large-result'
+                        unstash 'm5dn.large-result'
+                    } else if (env.ARM64_PATCH == "true") {
+                        // clear kernel
+                        sh "rm -rf \$HOME/downloads/${env.ARM64_KERNEL_NVR}"
+                        unstash 't4g.medium-result'
+                        unstash 'm6gd.large-result'
+                        unstash 'a1.large-result'
+                    }
+
+                    withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
+                        sh """
+                            ./cki-send.py --pipeline_id=${env.PIPELINE_ID} --build_url=${env.BUILD_URL} --cloud=AWS-EC2 --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY}
+                        """
+                    }
+                    googlechatnotification message: "${currentBuild.currentResult}\n${env.BUILD_TYPE}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: AWS-EC2\nConsole Log: ${env.BUILD_URL}display/redirect",
+                                            notifyAborted: true,
+                                            notifyFailure: true,
+                                            notifyNotBuilt: true,
+                                            notifySuccess: true,
+                                            url: "${env.GCN_URL}"
+                } else {
+                    googlechatnotification message: "ABORTED!\n${env.BUILD_TYPE}\n${env.KERNEL_NVR}\nInstance: AWS-EC2 [${env.AWS_INSTANCE_TYPE}]\nConsole Log: ${env.BUILD_URL}display/redirect",
+                                            notifyAborted: true,
+                                            notifyFailure: true,
+                                            notifyNotBuilt: true,
+                                            notifySuccess: true,
+                                            url: "${env.GCN_URL}"
+                }
+            }
+        }
+    }
+    options {
+        timestamps()
+        timeout(time: 2, unit: 'HOURS')
+    }
+}
+
+// set ABORT result
+void set_abort() {
+    sh "echo 'ABORT' > ${AWS_INSTANCE_TYPE}.${ARCH}.result"
+    stash includes: "${AWS_INSTANCE_TYPE}.${ARCH}.result", name: "${AWS_INSTANCE_TYPE}-result"
+}
+
+// set test result
+void set_test_result() {
+    sh """
+        if [ -f ltp.result ]; then
+            mv ltp.result ${AWS_INSTANCE_TYPE}.${ARCH}.result
+        else
+            echo 'ABORT' > ${AWS_INSTANCE_TYPE}.${ARCH}.result
+        fi
+    """
+    stash includes: "${AWS_INSTANCE_TYPE}.${ARCH}.result", name: "${AWS_INSTANCE_TYPE}-result"
+}
+
+// prepare running environment
+void prepare() {
+    sh """
+        id
+        while true; do
+            test -f /usr/bin/gcloud && break
+        done
+    """
+}
+
+// deploy aws instance
+void deploy() {
+    checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
+    dir("kite-deploy") {
+        withCredentials([string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY'), string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_KEY')]) {
+            sh "ansible-playbook -v -i inventory -e cloud_platform=aws deploy.yaml"
+        }
+    }
+}
+
+// download kernel rpms
+void download(kernel_url) {
+    sh """
+        ansible-playbook -v -i inventory -e cki_repo_url=${kernel_url} download.yaml
+        cat inventory
+    """
+}
+
+// a lot of setup things
+void setup() {
+    sh """
+        ansible-playbook -v -i inventory setup.yaml
+        cat inventory
+    """
+}
+
+// install kernel
+void install(kernel_nvr) {
+    sh """
+        chmod 600 key/identity
+        ansible-playbook -v -i inventory -e cloud_platform=aws -e kernel_nvr=${kernel_nvr} -e kernel_folder=${env.HOME}/downloads/${kernel_nvr} install.yaml
+    """
+}
+
+// run ltp test
+void run_test() {
+    sh "ansible-playbook -v -i inventory run-ltp.yaml"
+}
+
+// clear aws instance
+void remove() {
+    dir("kite-deploy") {
+        withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+            sh "ansible-playbook -v -i inventory -e cloud_platform=aws remove.yaml"
+        }
+    }
+}
+
+// archive logs
+void preserve_logs(log_type) {
+    // archive console/serial output
+    if (log_type == "console") {
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*.serial.log'
+    }
+
+    // archive test report and logs
+    if (log_type == "result") {
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*.result'
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*ltp.report'
+        archiveArtifacts allowEmptyArchive: true, artifacts: 'results/*.result'
+        archiveArtifacts allowEmptyArchive: true, artifacts: 'output/*.console'
+    }
+}
