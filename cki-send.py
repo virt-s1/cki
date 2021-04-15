@@ -19,6 +19,7 @@ def main(args):
 
     msg = {
         "cki_pipeline_id": args.pipeline_id,
+        "cki_pipeline_url": args.pipeline_url,
         "summarized_result": "PASS",
         "team_email": "3rd-qe-list@redhat.com",
         "team_name": "Virt-QE-S1",
@@ -70,6 +71,7 @@ if __name__ == '__main__':
     parser.add_argument("--ssl_cert_file", type=str, required=True, help="Certification file")
     parser.add_argument("--ssl_key_file", type=str, required=True, help="Private key file")
     parser.add_argument("--pipeline_id", type=int, required=True, help="CKI pipeline ID")
+    parser.add_argument("--pipeline_url", type=str, required=True, help="CKI pipeline URL")
     parser.add_argument("--build_url", type=str, required=True, help="Jenkins BUILD URL")
     parser.add_argument("--cloud", type=str, required=True, help="Cloud platform")
     args = parser.parse_args()

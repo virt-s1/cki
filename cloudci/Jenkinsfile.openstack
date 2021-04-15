@@ -26,9 +26,10 @@ pipeline {
                     }
 
                     env.PIPELINE_ID = object.pipelineid
+                    env.PIPELINE_URL = object.run.url
 
-                    env.MR_URL = object.merge_request_url
-                    env.MR_NUM = object.merge_request_url.split('/')[-1]
+                    env.MR_URL = object.merge_request.merge_request_url
+                    env.MR_NUM = object.merge_request.merge_request_url.split('/')[-1]
 
                     println non_x86_64_patch
                     println object.modified_files.size()
