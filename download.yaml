@@ -15,7 +15,7 @@
         var: kernel_nvr
 
     - set_fact:
-        kernel_folder: "{{ home_folder }}/downloads/{{ kernel_nvr }}"
+        kernel_folder: "{{ home_folder }}/downloads/{{ cloud_platform }}-{{ kernel_nvr }}"
 
     - name: create tmp folder to save unarchived file and folder
       file:

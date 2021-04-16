@@ -144,9 +144,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -157,9 +159,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -173,9 +177,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -219,9 +225,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -232,9 +240,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -248,9 +258,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -294,9 +306,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -307,9 +321,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -323,9 +339,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -369,9 +387,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -382,9 +402,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -398,9 +420,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -444,9 +468,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -457,9 +483,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -473,9 +501,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -519,9 +549,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -532,9 +564,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -548,9 +582,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -594,9 +630,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -607,9 +645,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -623,9 +663,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -669,9 +711,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -682,9 +726,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -698,9 +744,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -729,8 +777,8 @@ pipeline {
                     // let's aggregate result
                     if (env.BUILD_TYPE == "master") {
                         // clear kernel
-                        sh "rm -rf \$HOME/downloads/${env.X86_64_KERNEL_NVR}"
-                        sh "rm -rf \$HOME/downloads/${env.ARM64_KERNEL_NVR}"
+                        sh "rm -rf \$HOME/downloads/aws-${env.X86_64_KERNEL_NVR}"
+                        sh "rm -rf \$HOME/downloads/aws-${env.ARM64_KERNEL_NVR}"
                         unstash 't2.medium-result'
                         unstash 't3a.medium-result'
                         unstash 'm4.large-result'
@@ -741,8 +789,8 @@ pipeline {
                         unstash 'a1.large-result'
                     } else if (env.X86_64_PATCH == "true" && env.ARM64_PATCH == "true") {
                         // clear kernel
-                        sh "rm -rf \$HOME/downloads/${env.X86_64_KERNEL_NVR}"
-                        sh "rm -rf \$HOME/downloads/${env.ARM64_KERNEL_NVR}"
+                        sh "rm -rf \$HOME/downloads/aws-${env.X86_64_KERNEL_NVR}"
+                        sh "rm -rf \$HOME/downloads/aws-${env.ARM64_KERNEL_NVR}"
                         unstash 't2.medium-result'
                         unstash 't3a.medium-result'
                         unstash 'm4.large-result'
@@ -753,7 +801,7 @@ pipeline {
                         unstash 'a1.large-result'
                     } else if (env.X86_64_PATCH == "true") {
                         // clear kernel
-                        sh "rm -rf \$HOME/downloads/${env.X86_64_KERNEL_NVR}"
+                        sh "rm -rf \$HOME/downloads/aws-${env.X86_64_KERNEL_NVR}"
                         unstash 't2.medium-result'
                         unstash 't3a.medium-result'
                         unstash 'm4.large-result'
@@ -761,7 +809,7 @@ pipeline {
                         unstash 'm5dn.large-result'
                     } else if (env.ARM64_PATCH == "true") {
                         // clear kernel
-                        sh "rm -rf \$HOME/downloads/${env.ARM64_KERNEL_NVR}"
+                        sh "rm -rf \$HOME/downloads/aws-${env.ARM64_KERNEL_NVR}"
                         unstash 't4g.medium-result'
                         unstash 'm6gd.large-result'
                         unstash 'a1.large-result'
@@ -836,7 +884,7 @@ void deploy() {
 // download kernel rpms
 void download(kernel_url) {
     sh """
-        ansible-playbook -v -i inventory -e cki_repo_url=${kernel_url} download.yaml
+        ansible-playbook -v -i inventory -e cki_repo_url=${kernel_url} -e cloud_platform=aws download.yaml
         cat inventory
     """
 }
@@ -853,7 +901,7 @@ void setup() {
 void install(kernel_nvr) {
     sh """
         chmod 600 key/identity
-        ansible-playbook -v -i inventory -e cloud_platform=aws -e kernel_nvr=${kernel_nvr} -e kernel_folder=${env.HOME}/downloads/${kernel_nvr} install.yaml
+        ansible-playbook -v -i inventory -e cloud_platform=aws -e kernel_nvr=${kernel_nvr} -e kernel_folder=${env.HOME}/downloads/aws-${kernel_nvr} install.yaml
     """
 }
 

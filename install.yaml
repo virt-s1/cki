@@ -18,7 +18,7 @@
     - block:
         - name: install kernel on guest
           dnf:
-            name: "/home/admin/{{ kernel_nvr }}/kernel-{{ kernel_nvr }}.rpm, /home/admin/{{ kernel_nvr }}/kernel-core-{{ kernel_nvr }}.rpm, /home/admin/{{ kernel_nvr }}/kernel-modules-{{ kernel_nvr }}.rpm, /home/admin/{{ kernel_nvr }}/kernel-modules-extra-{{ kernel_nvr }}.rpm"
+            name: "/home/admin/{{ cloud_platform }}-{{ kernel_nvr }}/kernel-{{ kernel_nvr }}.rpm, /home/admin/{{ cloud_platform }}-{{ kernel_nvr }}/kernel-core-{{ kernel_nvr }}.rpm, /home/admin/{{ cloud_platform }}-{{ kernel_nvr }}/kernel-modules-{{ kernel_nvr }}.rpm, /home/admin/{{ cloud_platform }}-{{ kernel_nvr }}/kernel-modules-extra-{{ kernel_nvr }}.rpm"
             state: present
             allow_downgrade: yes
             disable_gpg_check: yes

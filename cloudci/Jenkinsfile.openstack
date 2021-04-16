@@ -89,9 +89,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -102,9 +104,11 @@ pipeline {
                             post {
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -118,9 +122,11 @@ pipeline {
                                 }
                                 failure {
                                     set_abort()
+                                    remove()
                                 }
                                 aborted {
                                     set_abort()
+                                    remove()
                                 }
                             }
                         }
@@ -147,7 +153,7 @@ pipeline {
                 env.ABORTED_RESULT = sh(returnStdout: true, script: "cat aborted_result").trim()
                 if (env.ABORTED_RESULT != 'ABORTED') {
                     // clear kernel
-                    sh "rm -rf \$HOME/downloads/${env.KERNEL_NVR}"
+                    sh "rm -rf \$HOME/downloads/openstack-${env.KERNEL_NVR}"
 
                     googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: OpenStack\nConsole Log: ${env.BUILD_URL}display/redirect",
                                             notifyAborted: true,
@@ -213,7 +219,7 @@ void deploy() {
 // download kernel rpms
 void download() {
     sh """
-        ansible-playbook -v -i inventory -e cki_repo_url=${env.KERNEL_URL} download.yaml
+        ansible-playbook -v -i inventory -e cki_repo_url=${env.KERNEL_URL} -e cloud_platform=openstack download.yaml
         cat inventory
     """
 }
@@ -230,7 +236,7 @@ void setup() {
 void install() {
     sh """
         chmod 600 key/identity
-        ansible-playbook -v -i inventory -e cloud_platform=openstack -e kernel_nvr=${env.KERNEL_NVR} -e kernel_folder=${env.HOME}/downloads/${env.KERNEL_NVR} install.yaml
+        ansible-playbook -v -i inventory -e cloud_platform=openstack -e kernel_nvr=${env.KERNEL_NVR} -e kernel_folder=${env.HOME}/downloads/openstack-${env.KERNEL_NVR} install.yaml
     """
 }
 
