@@ -2,6 +2,7 @@ pipeline {
     agent { label 'container-fedora-33-prod' }
     environment {
         ARCH = "x86_64"
+        GCN_URL = credentials('google-chat-notification-url')
     }
     stages {
         stage("x86_64 only") {
