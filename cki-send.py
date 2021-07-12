@@ -41,9 +41,13 @@ def main(args):
     print(running_path)
 
     files = running_path.glob('*.result')
+    reports = running_path.glob('*.report')
 
     instances = [pathlib.PurePath(x).name.split(".")[:-1] for x in files]
     print(instances)
+
+    report_files = [pathlib.PurePath(x).name for x in reports]
+    print(report_files)
 
     if args.cloud == "AWS-EC2":
         instances = [(".".join(x[:2]), x[2]) for x in instances]
