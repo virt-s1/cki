@@ -26,9 +26,6 @@ pipeline {
                         }
                     }
 
-                    env.PIPELINE_ID = object.pipelineid
-                    env.PIPELINE_URL = object.run.url
-
                     env.MR_URL = object.merge_request.merge_request_url
                     env.MR_NUM = object.merge_request.merge_request_url.split('/')[-1]
 
@@ -39,6 +36,7 @@ pipeline {
                         object.build_info.each {
                             if (it.architecture == 'x86_64') {
                                 env.KERNEL_URL = it.kernel_package_url
+                                env.KCIDB_BUILD_ID = it.build_id
                             }
                         }
 
@@ -54,7 +52,7 @@ pipeline {
 
                         sh "printenv"
                     } else {
-                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}-MR-${env.MR_NUM}"
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-MR-${env.MR_NUM}"
                         sh "echo 'ABORTED' > aborted_result"
                         currentBuild.result = "ABORTED"
                         error('Stopping non x86_64 patch build')
