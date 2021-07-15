@@ -39,9 +39,6 @@ pipeline {
                         env.X86_64_PATCH = "true"
                     }
 
-                    env.PIPELINE_ID = object.pipelineid
-                    env.PIPELINE_URL = object.run.url
-
                     env.MR_URL = object.merge_request.merge_request_url
                     env.MR_NUM = object.merge_request.merge_request_url.split('/')[-1]
                     println env.MR_NUM
@@ -54,14 +51,17 @@ pipeline {
                             if (it.architecture == 'x86_64') {
                                 env.X86_64_KERNEL_URL = it.kernel_package_url
                                 env.X86_64_KERNEL_NVR = it.kernel_package_url.split('/')[-1]
+                                env.KCIDB_BUILD_ID = it.build_id
                             }
                             if (it.architecture == 'aarch64') {
                                 env.ARM64_KERNEL_URL = it.kernel_package_url
                                 env.ARM64_KERNEL_NVR = it.kernel_package_url.split('/')[-1]
+                                env.KCIDB_BUILD_ID = it.build_id
                             }
                         }
                         println env.X86_64_KERNEL_NVR
                         println env.X86_64_KERNEL_URL
+                        println env.KCIDB_BUILD_ID
 
                         if (env.BUILD_TYPE == "master") {
                             env.KERNEL_NVR = env.X86_64_KERNEL_NVR.replace('.x86_64', '')
@@ -84,7 +84,7 @@ pipeline {
 
                         sh "printenv"
                     } else {
-                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_or_arm64_patch-${env.PIPELINE_ID}-MR-${env.MR_NUM}"
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_or_arm64_patch-MR-${env.MR_NUM}"
                         sh "echo 'ABORTED' > aborted_result"
                         currentBuild.result = "ABORTED"
                         error('Stopping non x86_64 or arm64 patch build')
@@ -817,7 +817,7 @@ pipeline {
 
                     withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
                         sh """
-                            ./cki-send.py --pipeline_id=${env.PIPELINE_ID} --build_url=${env.BUILD_URL} --cloud=AWS-EC2 --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY} --pipeline_url=${env.PIPELINE_URL}
+                            ./cki-send.py --build_url=${env.BUILD_URL} --build_id=${env.BUILD_ID} --cloud=AWS-EC2 --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY} --kcidb_build_id=${env.KCIDB_BUILD_ID}
                         """
                     }
                     googlechatnotification message: "${currentBuild.currentResult}\n${env.BUILD_TYPE}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: AWS-EC2\nConsole Log: ${env.BUILD_URL}display/redirect",
