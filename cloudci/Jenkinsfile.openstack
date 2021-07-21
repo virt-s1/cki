@@ -76,7 +76,7 @@ pipeline {
             parallel {
                 stage("m1.L") {
                     agent { label "container-fedora-33-prod" }
-                    environment { OS_INSTANCE_TYPE = "m1.large" }
+                    environment { INSTANCE_TYPE = "m1.large" }
                     stages {
                         stage("prepare") {
                             steps {
@@ -181,20 +181,20 @@ pipeline {
 
 // set ABORT result
 void set_abort() {
-    sh "echo 'ABORT' > ${OS_INSTANCE_TYPE}.${ARCH}.result"
-    stash includes: "${OS_INSTANCE_TYPE}.${ARCH}.result", name: "${OS_INSTANCE_TYPE}-result"
+    sh "echo 'ABORT' > ${INSTANCE_TYPE}.${ARCH}.result"
+    stash includes: "${INSTANCE_TYPE}.${ARCH}.result", name: "${INSTANCE_TYPE}-result"
 }
 
 // set test result
 void set_test_result() {
     sh """
         if [ -f ltp.result ]; then
-            mv ltp.result ${OS_INSTANCE_TYPE}.${ARCH}.result
+            mv ltp.result ${INSTANCE_TYPE}.${ARCH}.result
         else
-            echo 'ABORT' > ${OS_INSTANCE_TYPE}.${ARCH}.result
+            echo 'ABORT' > ${INSTANCE_TYPE}.${ARCH}.result
         fi
     """
-    stash includes: "${OS_INSTANCE_TYPE}.${ARCH}.result", name: "${OS_INSTANCE_TYPE}-result"
+    stash includes: "${INSTANCE_TYPE}.${ARCH}.result", name: "${INSTANCE_TYPE}-result"
 }
 
 // prepare running environment

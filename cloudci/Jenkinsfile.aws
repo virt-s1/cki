@@ -128,7 +128,7 @@ pipeline {
                     }
                     agent { label "container-fedora-33-prod" }
                     environment {
-                        AWS_INSTANCE_TYPE = "t2.medium"
+                        INSTANCE_TYPE = "t2.medium"
                         ARCH = "x86_64"
                     }
                     stages {
@@ -209,7 +209,7 @@ pipeline {
                     }
                     agent { label "container-fedora-33-prod" }
                     environment {
-                        AWS_INSTANCE_TYPE = "t3a.medium"
+                        INSTANCE_TYPE = "t3a.medium"
                         ARCH = "x86_64"
                     }
                     stages {
@@ -290,7 +290,7 @@ pipeline {
                     }
                     agent { label "container-fedora-33-prod" }
                     environment {
-                        AWS_INSTANCE_TYPE = "m4.large"
+                        INSTANCE_TYPE = "m4.large"
                         ARCH = "x86_64"
                     }
                     stages {
@@ -371,7 +371,7 @@ pipeline {
                     }
                     agent { label "container-fedora-33-prod" }
                     environment {
-                        AWS_INSTANCE_TYPE = "m5.large"
+                        INSTANCE_TYPE = "m5.large"
                         ARCH = "x86_64"
                     }
                     stages {
@@ -452,7 +452,7 @@ pipeline {
                     }
                     agent { label "container-fedora-33-prod" }
                     environment {
-                        AWS_INSTANCE_TYPE = "m5dn.large"
+                        INSTANCE_TYPE = "m5dn.large"
                         ARCH = "x86_64"
                     }
                     stages {
@@ -533,7 +533,7 @@ pipeline {
                     }
                     agent { label "container-fedora-33-prod" }
                     environment {
-                        AWS_INSTANCE_TYPE = "t4g.medium"
+                        INSTANCE_TYPE = "t4g.medium"
                         ARCH = "aarch64"
                     }
                     stages {
@@ -614,7 +614,7 @@ pipeline {
                     }
                     agent { label "container-fedora-33-prod" }
                     environment {
-                        AWS_INSTANCE_TYPE = "m6gd.large"
+                        INSTANCE_TYPE = "m6gd.large"
                         ARCH = "aarch64"
                     }
                     stages {
@@ -695,7 +695,7 @@ pipeline {
                     }
                     agent { label "container-fedora-33-prod" }
                     environment {
-                        AWS_INSTANCE_TYPE = "a1.large"
+                        INSTANCE_TYPE = "a1.large"
                         ARCH = "aarch64"
                     }
                     stages {
@@ -827,7 +827,7 @@ pipeline {
                                             notifySuccess: true,
                                             url: "${env.GCN_URL}"
                 } else {
-                    googlechatnotification message: "ABORTED!\n${env.BUILD_TYPE}\n${env.KERNEL_NVR}\nInstance: AWS-EC2 [${env.AWS_INSTANCE_TYPE}]\nConsole Log: ${env.BUILD_URL}display/redirect",
+                    googlechatnotification message: "ABORTED!\n${env.BUILD_TYPE}\n${env.KERNEL_NVR}\nInstance: AWS-EC2 [${env.INSTANCE_TYPE}]\nConsole Log: ${env.BUILD_URL}display/redirect",
                                             notifyAborted: true,
                                             notifyFailure: true,
                                             notifyNotBuilt: true,
@@ -845,20 +845,20 @@ pipeline {
 
 // set ABORT result
 void set_abort() {
-    sh "echo 'ABORT' > ${AWS_INSTANCE_TYPE}.${ARCH}.result"
-    stash includes: "${AWS_INSTANCE_TYPE}.${ARCH}.result", name: "${AWS_INSTANCE_TYPE}-result"
+    sh "echo 'ABORT' > ${INSTANCE_TYPE}.${ARCH}.result"
+    stash includes: "${INSTANCE_TYPE}.${ARCH}.result", name: "${INSTANCE_TYPE}-result"
 }
 
 // set test result
 void set_test_result() {
     sh """
         if [ -f ltp.result ]; then
-            mv ltp.result ${AWS_INSTANCE_TYPE}.${ARCH}.result
+            mv ltp.result ${INSTANCE_TYPE}.${ARCH}.result
         else
-            echo 'ABORT' > ${AWS_INSTANCE_TYPE}.${ARCH}.result
+            echo 'ABORT' > ${INSTANCE_TYPE}.${ARCH}.result
         fi
     """
-    stash includes: "${AWS_INSTANCE_TYPE}.${ARCH}.result", name: "${AWS_INSTANCE_TYPE}-result"
+    stash includes: "${INSTANCE_TYPE}.${ARCH}.result", name: "${INSTANCE_TYPE}-result"
 }
 
 // prepare running environment
