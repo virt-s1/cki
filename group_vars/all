@@ -1,2 +1,3 @@
 # Instance type/name
 instance_type: "{{ lookup('env', 'INSTANCE_TYPE') }}"
+arch: "{{ lookup('env', 'ARCH') }}"
