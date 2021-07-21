@@ -18,7 +18,7 @@
       become: yes
 
     - name: run ltp test
-      command: "./runltp -p -q -f {{ item }} -o {{ instance }}-{{ item }}.console -l {{ instance }}-{{ item }}.result -S skip.ltp"
+      command: "./runltp -p -q -f {{ item }} -o {{ instance_type }}-{{ item }}.console -l {{ instance_type }}-{{ item }}.result -S skip.ltp"
       become: yes
       become_user: root
       args:
@@ -72,7 +72,7 @@
     - name: write ltp report
       template:
         src: ltp_report.j2
-        dest: "{{ instance }}-ltp.report"
+        dest: "{{ instance_type }}-ltp.report"
       delegate_to: localhost
 
     - name: write result to ltp.result file

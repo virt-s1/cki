@@ -31,13 +31,13 @@
 
       always:
         - name: gcp check and save the progress of an instance using
-          shell: gcloud compute instances get-serial-port-output {{ instance }} --zone=us-central1-a --project={{ gcp_project }} > {{ instance }}.upgrade.serial.log
+          shell: gcloud compute instances get-serial-port-output {{ instance }} --zone=us-central1-a --project={{ gcp_project }} > {{ instance_type }}.upgrade.serial.log
           delegate_to: localhost
           when: cloud_platform == "gcp"
           ignore_errors: true
 
         - name: aws check and save the progress of an instance using
-          shell: aws --profile {{ aws_profile }} --region {{ aws_region }} ec2 get-console-output --instance-id {{ instance }} --output text > {{ instance }}.upgrade.serial.log
+          shell: aws --profile {{ aws_profile }} --region {{ aws_region }} ec2 get-console-output --instance-id {{ instance }} --output text > {{ instance_type }}.upgrade.serial.log
           delegate_to: localhost
           when: cloud_platform == "aws"
           ignore_errors: true
