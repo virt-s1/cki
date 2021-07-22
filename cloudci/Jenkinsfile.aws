@@ -39,8 +39,6 @@ pipeline {
                         env.X86_64_PATCH = "true"
                     }
 
-                    env.KCIDB_BUILD_ID = object.build_id
-
                     env.MR_URL = object.merge_request.merge_request_url
                     env.MR_NUM = object.merge_request.merge_request_url.split('/')[-1]
                     println env.MR_NUM
@@ -53,14 +51,17 @@ pipeline {
                             if (it.architecture == 'x86_64') {
                                 env.X86_64_KERNEL_URL = it.kernel_package_url
                                 env.X86_64_KERNEL_NVR = it.kernel_package_url.split('/')[-1]
+                                env.KCIDB_BUILD_ID = it.build_id
                             }
                             if (it.architecture == 'aarch64') {
                                 env.ARM64_KERNEL_URL = it.kernel_package_url
                                 env.ARM64_KERNEL_NVR = it.kernel_package_url.split('/')[-1]
+                                env.KCIDB_BUILD_ID = it.build_id
                             }
                         }
                         println env.X86_64_KERNEL_NVR
                         println env.X86_64_KERNEL_URL
+                        println env.KCIDB_BUILD_ID
 
                         if (env.BUILD_TYPE == "master") {
                             env.KERNEL_NVR = env.X86_64_KERNEL_NVR.replace('.x86_64', '')
@@ -83,7 +84,7 @@ pipeline {
 
                         sh "printenv"
                     } else {
-                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_or_arm64_patch-${env.KCIDB_BUILD_ID}-MR-${env.MR_NUM}"
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_or_arm64_patch-MR-${env.MR_NUM}"
                         sh "echo 'ABORTED' > aborted_result"
                         currentBuild.result = "ABORTED"
                         error('Stopping non x86_64 or arm64 patch build')

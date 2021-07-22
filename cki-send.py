@@ -22,8 +22,6 @@ def main(args):
 
     reports = running_path.glob('*.report')
 
-    print([report.name for report in reports])
-
     msg = {
         "version": {
             "major": 4,
@@ -59,7 +57,7 @@ def main(args):
                     "waived": True,
                     "output_files": [
                         {"web_gui": f"{args.build_url}display/redirect"},
-                        {"consoleText": f'{args.build_url}/consoleText'},
+                        {"consoleText": f'{args.build_url}consoleText'},
                         {result_file_name: result_url},
                     ],
                 })
