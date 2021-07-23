@@ -35,7 +35,6 @@
         - fs_bind
         - fs_perms_simple
         - fsx
-        - hugetlb
         - input
         - ipc
         - math
@@ -43,7 +42,6 @@
         - nptl
         - power_management_tests
         - sched
-        - syscalls
         - uevent
         - net.tcp_cmds
         - net.ipv6
