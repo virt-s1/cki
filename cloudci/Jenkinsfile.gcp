@@ -523,7 +523,7 @@ void download() {
 // a lot of setup things
 void setup() {
     sh """
-        ansible-playbook -v -i inventory setup.yaml
+        ansible-playbook -v -i inventory -e cloud_platform=gcp setup.yaml
         cat inventory
     """
 }

@@ -25,7 +25,6 @@
         chdir: /opt/ltp/
       loop:
         - hyperthreading
-        - cpuhotplug
         - commands
         - connectors
         - crypto

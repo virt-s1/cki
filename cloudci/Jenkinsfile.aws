@@ -892,7 +892,7 @@ void download(kernel_url) {
 // a lot of setup things
 void setup() {
     sh """
-        ansible-playbook -v -i inventory setup.yaml
+        ansible-playbook -v -i inventory -e cloud_platform=aws setup.yaml
         cat inventory
     """
 }

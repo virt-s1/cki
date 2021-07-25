@@ -1,12 +1,8 @@
 pipeline {
-    agent { label 'container-fedora-33-prod' }
+    agent { label 'container-fedora-34-stage' }
     environment {
         ARCH = "x86_64"
         GCN_URL = credentials('google-chat-notification-url')
-        VSPHERE_SERVER = "10.73.73.245"
-        ESXI_HOST = "10.16.209.80"
-        ESXI_DATACENTER = "Datacenter7.0"
-        ESXI_DATASTORE = "datastore-80"
     }
     stages {
         stage("x86_64 only") {
@@ -78,9 +74,9 @@ pipeline {
         }
         stage("testing") {
             parallel {
-                stage("ESXi7-BIOS") {
-                    agent { label "container-fedora-33-prod" }
-                    environment { INSTANCE_TYPE = "bios" }
+                stage("B2s") {
+                    agent { label "container-fedora-34-stage" }
+                    environment { INSTANCE_TYPE = "Standard_B2s" }
                     stages {
                         stage("prepare") {
                             steps {
@@ -149,9 +145,222 @@ pipeline {
                         }
                     }
                 }
-                stage("ESXi7-UEFI") {
-                    agent { label "container-fedora-33-prod" }
-                    environment { INSTANCE_TYPE = "efi" }
+                stage("D4asV4") {
+                    agent { label "container-fedora-34-stage" }
+                    environment { INSTANCE_TYPE = "Standard_D4as_v4" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("F4sV2") {
+                    agent { label "container-fedora-34-stage" }
+                    environment { INSTANCE_TYPE = "Standard_F4s_v2" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("L8sV2") {
+                    agent { label "container-fedora-34-stage" }
+                    environment { INSTANCE_TYPE = "Standard_L8s_v2" }
+                    stages {
+                        stage("prepare") {
+                            steps {
+                                prepare()
+                            }
+                        }
+                        stage("deploy") {
+                            steps {
+                                deploy()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("setup") {
+                            steps {
+                                setup()
+                            }
+                            post {
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("install") {
+                            steps {
+                                install()
+                            }
+                            post {
+                                always {
+                                    preserve_logs("console")
+                                }
+                                failure {
+                                    set_abort()
+                                    remove()
+                                }
+                                aborted {
+                                    set_abort()
+                                    remove()
+                                }
+                            }
+                        }
+                        stage("testing") {
+                            steps {
+                                run_test()
+                            }
+                            post {
+                                always {
+                                    set_test_result()
+                                    preserve_logs("result")
+                                    remove()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("NC6") {
+                    agent { label "container-fedora-34-stage" }
+                    environment { INSTANCE_TYPE = "Standard_NC6" }
                     stages {
                         stage("prepare") {
                             steps {
@@ -229,24 +438,27 @@ pipeline {
                 env.ABORTED_RESULT = sh(returnStdout: true, script: "cat aborted_result").trim()
                 if (env.ABORTED_RESULT != 'ABORTED') {
                     // clear kernel
-                    sh "rm -rf \$HOME/downloads/esxi-${env.KERNEL_NVR}"
+                    sh "rm -rf \$HOME/downloads/azure-${env.KERNEL_NVR}"
                     // let's aggregate result
-                    unstash 'bios-result'
-                    unstash 'efi-result'
+                    unstash 'Standard_B2s-result'
+                    unstash 'Standard_D4as_v4-result'
+                    unstash 'Standard_F4s_v2-result'
+                    unstash 'Standard_L8s_v2-result'
+                    unstash 'Standard_NC6-result'
 
                     withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
                         sh """
-                            ./cki-send.py --pipeline_id=${env.PIPELINE_ID} --build_url=${env.BUILD_URL} --cloud=ESXi-7.0 --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY} --pipeline_url=${env.PIPELINE_URL}
+                            ./cki-send.py --pipeline_id=${env.PIPELINE_ID} --build_url=${env.BUILD_URL} --cloud=Azure --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY} --pipeline_url=${env.PIPELINE_URL}
                         """
                     }
-                    googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: ESXi-7.0\nConsole Log: ${env.BUILD_URL}display/redirect",
+                    googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: Azure\nConsole Log: ${env.BUILD_URL}display/redirect",
                                             notifyAborted: true,
                                             notifyFailure: true,
                                             notifyNotBuilt: true,
                                             notifySuccess: true,
                                             url: "${env.GCN_URL}"
                 } else {
-                    googlechatnotification message: "ABORTED!\n${env.KERNEL_NVR}\nInstance: ESXi-7.0 [${INSTANCE_TYPE}]\nConsole Log: ${env.BUILD_URL}display/redirect",
+                    googlechatnotification message: "ABORTED!\n${env.KERNEL_NVR}\nInstance: Azure [${env.INSTANCE_TYPE}]\nConsole Log: ${env.BUILD_URL}display/redirect",
                                             notifyAborted: true,
                                             notifyFailure: true,
                                             notifyNotBuilt: true,
@@ -285,17 +497,17 @@ void prepare() {
     sh """
         id
         while true; do
-            test -f /usr/bin/gcloud && break
+            test -f /usr/bin/az && break
         done
     """
 }
 
-// deploy esxi instance
+// deploy azure instance
 void deploy() {
     checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
     dir("kite-deploy") {
-        withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME')]) {
-            sh "ansible-playbook -v -i inventory -e cloud_platform=esxi deploy.yaml"
+        withCredentials([string(credentialsId: 'azure-client-id', variable: 'AZURE_CLIENT_ID'), string(credentialsId: 'azure-secret', variable: 'AZURE_SECRET'), string(credentialsId: 'azure-subscription-id', variable: 'AZURE_SUBSCRIPTION_ID'), string(credentialsId: 'azure-tenant', variable: 'AZURE_TENANT')]) {
+            sh "ansible-playbook -v -i inventory -e cloud_platform=azure deploy.yaml"
         }
     }
 }
@@ -303,7 +515,7 @@ void deploy() {
 // download kernel rpms
 void download() {
     sh """
-        ansible-playbook -v -i inventory -e cki_repo_url=${env.KERNEL_URL} -e cloud_platform=esxi download.yaml
+        ansible-playbook -v -i inventory -e cki_repo_url=${env.KERNEL_URL} -e cloud_platform=azure download.yaml
         cat inventory
     """
 }
@@ -311,19 +523,17 @@ void download() {
 // a lot of setup things
 void setup() {
     sh """
-        ansible-playbook -v -i inventory -e cloud_platform=esxi setup.yaml
+        ansible-playbook -v -i inventory -e cloud_platform=azure setup.yaml
         cat inventory
     """
 }
 
 // install kernel
 void install() {
-    withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME')]) {
-        sh """
-            chmod 600 key/identity
-            ansible-playbook -v -i inventory -e cloud_platform=esxi -e kernel_nvr=${env.KERNEL_NVR} -e kernel_folder=${env.HOME}/downloads/esxi-${env.KERNEL_NVR} install.yaml
-        """
-    }
+    sh """
+        chmod 600 key/identity
+        ansible-playbook -v -i inventory -e cloud_platform=azure -e kernel_nvr=${env.KERNEL_NVR} -e kernel_folder=${env.HOME}/downloads/azure-${env.KERNEL_NVR} install.yaml
+    """
 }
 
 // run ltp test
@@ -331,11 +541,11 @@ void run_test() {
     sh "ansible-playbook -v -i inventory run-ltp.yaml"
 }
 
-// clear esxi instance
+// clear azure instance
 void remove() {
     dir("kite-deploy") {
-        withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME'), string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
-            sh "ansible-playbook -v -i inventory -e cloud_platform=esxi remove.yaml"
+        withCredentials([string(credentialsId: 'azure-client-id', variable: 'AZURE_CLIENT_ID'), string(credentialsId: 'azure-secret', variable: 'AZURE_SECRET'), string(credentialsId: 'azure-subscription-id', variable: 'AZURE_SUBSCRIPTION_ID'), string(credentialsId: 'azure-tenant', variable: 'AZURE_TENANT')]) {
+            sh "ansible-playbook -v -i inventory -e cloud_platform=azure remove.yaml"
         }
     }
 }
@@ -344,7 +554,8 @@ void remove() {
 void preserve_logs(log_type) {
     // archive console/serial output
     if (log_type == "console") {
-        archiveArtifacts allowEmptyArchive: true, artifacts: '*.serial.log'
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*screenshot.bmp'
+        archiveArtifacts allowEmptyArchive: true, artifacts: '*serial-console.log'
     }
 
     // archive test report and logs

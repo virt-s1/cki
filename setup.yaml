@@ -32,3 +32,21 @@
         option: instance
         value: "{{ result_instance.stdout }}"
         allow_no_value: yes
+
+    - name: grep resource group group name
+      command: awk -F "=" '/resource_group_name/ {print $2}' kite-deploy/inventory
+      register: result_resource_group
+      when: cloud_platform == "azure"
+
+    - debug:
+        var: result_resource_group.stdout
+      when: cloud_platform == "azure"
+
+    - name: add resource group name into guest group vars
+      ini_file:
+        path: "inventory"
+        section: guest:vars
+        option: resource_group_name
+        value: "{{ result_resource_group.stdout }}"
+        allow_no_value: yes
+      when: cloud_platform == "azure"
