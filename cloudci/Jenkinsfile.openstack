@@ -87,11 +87,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                             }
@@ -102,11 +102,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                             }
@@ -120,11 +120,11 @@ pipeline {
                                     preserve_logs("console")
                                 }
                                 failure {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                             }
@@ -153,6 +153,9 @@ pipeline {
                 if (env.ABORTED_RESULT != 'ABORTED') {
                     // clear kernel
                     sh "rm -rf \$HOME/downloads/openstack-${env.KERNEL_NVR}"
+                    // let's aggregate result
+                    unstash 'm1.large-result'
+                    unstash 'm1.large-report'
 
                     googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: OpenStack\nConsole Log: ${env.BUILD_URL}display/redirect",
                                             notifyAborted: true,
@@ -178,9 +181,19 @@ pipeline {
 }
 
 // set ABORT result
-void set_abort() {
+void set_abort(stage_name) {
     sh "echo 'ABORT' > ${INSTANCE_TYPE}.${ARCH}.result"
+    if (stage_name == 'deploy') {
+        sh "echo 'vm_deployment FAIL empty' > ${INSTANCE_TYPE}.${ARCH}.report"
+    }
+    if (stage_name == 'setup') {
+        sh "echo 'env_setup FAIL empty' > ${INSTANCE_TYPE}.${ARCH}.report"
+    }
+    if (stage_name == 'install') {
+        sh "echo 'kernel_upgrade FAIL empty' > ${INSTANCE_TYPE}.${ARCH}.report"
+    }
     stash includes: "${INSTANCE_TYPE}.${ARCH}.result", name: "${INSTANCE_TYPE}-result"
+    stash includes: "${INSTANCE_TYPE}.${ARCH}.report", name: "${INSTANCE_TYPE}-report"
 }
 
 // set test result
@@ -190,9 +203,11 @@ void set_test_result() {
             mv ltp.result ${INSTANCE_TYPE}.${ARCH}.result
         else
             echo 'ABORT' > ${INSTANCE_TYPE}.${ARCH}.result
+            echo 'LTP_test ABORT empty' > ${INSTANCE_TYPE}.${ARCH}-ltp.report
         fi
     """
     stash includes: "${INSTANCE_TYPE}.${ARCH}.result", name: "${INSTANCE_TYPE}-result"
+    stash includes: "${INSTANCE_TYPE}.${ARCH}-ltp.report", name: "${INSTANCE_TYPE}-report"
 }
 
 // prepare running environment

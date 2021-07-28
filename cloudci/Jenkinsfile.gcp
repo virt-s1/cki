@@ -87,11 +87,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                             }
@@ -102,11 +102,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                             }
@@ -120,11 +120,11 @@ pipeline {
                                     preserve_logs("console")
                                 }
                                 failure {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                             }
@@ -158,11 +158,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                             }
@@ -173,11 +173,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                             }
@@ -191,11 +191,11 @@ pipeline {
                                     preserve_logs("console")
                                 }
                                 failure {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                             }
@@ -229,11 +229,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                             }
@@ -244,11 +244,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                             }
@@ -262,11 +262,11 @@ pipeline {
                                     preserve_logs("console")
                                 }
                                 failure {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                             }
@@ -300,11 +300,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                             }
@@ -315,11 +315,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                             }
@@ -333,11 +333,11 @@ pipeline {
                                     preserve_logs("console")
                                 }
                                 failure {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                             }
@@ -371,11 +371,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('deploy')
                                     remove()
                                 }
                             }
@@ -386,11 +386,11 @@ pipeline {
                             }
                             post {
                                 failure {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('setup')
                                     remove()
                                 }
                             }
@@ -404,11 +404,11 @@ pipeline {
                                     preserve_logs("console")
                                 }
                                 failure {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                                 aborted {
-                                    set_abort()
+                                    set_abort('install')
                                     remove()
                                 }
                             }
@@ -443,6 +443,11 @@ pipeline {
                     unstash 'n1-standard-2-result'
                     unstash 'e2-standard-2-result'
                     unstash 'c2-standard-4-result'
+                    unstash 'n2d-standard-2-report'
+                    unstash 'n2-standard-2-report'
+                    unstash 'n1-standard-2-report'
+                    unstash 'e2-standard-2-report'
+                    unstash 'c2-standard-4-report'
 
                     withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
                         sh """
@@ -473,9 +478,19 @@ pipeline {
 }
 
 // set ABORT result
-void set_abort() {
+void set_abort(stage_name) {
     sh "echo 'ABORT' > ${INSTANCE_TYPE}.${ARCH}.result"
+    if (stage_name == 'deploy') {
+        sh "echo 'vm_deployment FAIL empty' > ${INSTANCE_TYPE}.${ARCH}.report"
+    }
+    if (stage_name == 'setup') {
+        sh "echo 'env_setup FAIL empty' > ${INSTANCE_TYPE}.${ARCH}.report"
+    }
+    if (stage_name == 'install') {
+        sh "echo 'kernel_upgrade FAIL empty' > ${INSTANCE_TYPE}.${ARCH}.report"
+    }
     stash includes: "${INSTANCE_TYPE}.${ARCH}.result", name: "${INSTANCE_TYPE}-result"
+    stash includes: "${INSTANCE_TYPE}.${ARCH}.report", name: "${INSTANCE_TYPE}-report"
 }
 
 // set test result
@@ -485,9 +500,11 @@ void set_test_result() {
             mv ltp.result ${INSTANCE_TYPE}.${ARCH}.result
         else
             echo 'ABORT' > ${INSTANCE_TYPE}.${ARCH}.result
+            echo 'LTP_test ABORT empty' > ${INSTANCE_TYPE}.${ARCH}-ltp.report
         fi
     """
     stash includes: "${INSTANCE_TYPE}.${ARCH}.result", name: "${INSTANCE_TYPE}-result"
+    stash includes: "${INSTANCE_TYPE}.${ARCH}-ltp.report", name: "${INSTANCE_TYPE}-report"
 }
 
 // prepare running environment
