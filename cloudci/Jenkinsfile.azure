@@ -39,6 +39,7 @@ pipeline {
                         object.build_info.each {
                             if (it.architecture == 'x86_64') {
                                 env.KERNEL_URL = it.kernel_package_url
+                                env.KCIDB_BUILD_ID = it.build_id
                             }
                         }
 
@@ -54,7 +55,7 @@ pipeline {
 
                         sh "printenv"
                     } else {
-                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-${env.PIPELINE_ID}-MR-${env.MR_NUM}"
+                        currentBuild.displayName = "${env.BUILD_NUMBER}-non_x86_64_patch_build-MR-${env.MR_NUM}"
                         sh "echo 'ABORTED' > aborted_result"
                         currentBuild.result = "ABORTED"
                         error('Stopping non x86_64 patch build')
@@ -448,7 +449,7 @@ pipeline {
 
                     withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
                         sh """
-                            ./cki-send.py --pipeline_id=${env.PIPELINE_ID} --build_url=${env.BUILD_URL} --cloud=Azure --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY} --pipeline_url=${env.PIPELINE_URL}
+                            ./cki-send.py --build_url=${env.BUILD_URL} --build_id=${env.BUILD_ID} --cloud=Azure --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY} --kcidb_build_id=${env.KCIDB_BUILD_ID}
                         """
                     }
                     googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: Azure\nConsole Log: ${env.BUILD_URL}display/redirect",
