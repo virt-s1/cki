@@ -40,36 +40,56 @@ def main(args):
             for line in report_file.readlines():
                 test, status, _ = line.split()
 
-                console_url = f"{args.build_url}artifact/output/{instance_type}-{test}.console"
-                result_file_name = f'{instance_type}-{test}.result'
-                result_url = f"{args.build_url}artifact/results/{result_file_name}"
-
-                msg["tests"].append({
+                common_data = {
                     "build_id": args.kcidb_build_id,
-                    "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}.{test}',
                     "origin": "redhat",
                     "environment": {
-                        "comment": f'Instance {instance_type} of {args.cloud}'
+                        "comment": f"Instance {instance_type} of {args.cloud}"
                     },
-                    "path": f"ltp.{test}",
-                    "log_url": console_url,
-                    "status": status,
                     "waived": True,
-                    "output_files": [
-                        {
-                            "name": "web_gui",
-                            "url": f"{args.build_url}display/redirect",
-                        },
-                        {
-                            "name": "consoleText",
-                            "url": f"{args.build_url}consoleText",
-                        },
-                        {
-                            "name": result_file_name,
-                            "url": result_url,
-                        },
-                    ],
-                })
+                }
+
+                common_output_files = [
+                    {
+                        "name": "web_gui",
+                        "url": f"{args.build_url}display/redirect",
+                    },
+                    {
+                        "name": "consoleText",
+                        "url": f"{args.build_url}consoleText",
+                    },
+                ]
+
+                # When LTP_test is reported, means that the tests failed and we won't get subtests.
+                if test == "LTP_test" and status == "ABORT":
+                    extra_data = {
+                        "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}',
+                        "path": "ltp",
+                        # KCIDB status cannot be ABORT
+                        "status": "ERROR",
+                        "output_files": common_output_files,
+                    }
+
+                else:
+                    console_url = f"{args.build_url}artifact/output/{instance_type}-{test}.console"
+                    result_file_name = f'{instance_type}-{test}.result'
+                    result_url = f"{args.build_url}artifact/results/{result_file_name}"
+
+                    extra_data = {
+                        "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}.{test}',
+                        "path": f"ltp.{test}",
+                        "log_url": console_url,
+                        "status": status,
+                        "output_files": common_output_files + [
+                            {
+                                "name": result_file_name,
+                                "url": result_url,
+                            },
+                        ],
+                    }
+
+
+                msg["tests"].append({**common_data, **extra_data})
 
 
     msg_json = json.dumps(msg)
