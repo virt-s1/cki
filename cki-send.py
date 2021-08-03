@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 import stomp
 import pathlib
 
@@ -38,7 +39,7 @@ def main(args):
 
         with report.open() as report_file:
             for line in report_file.readlines():
-                test, status, _ = line.split()
+                test, status, duration = line.split()
 
                 common_data = {
                     "build_id": args.kcidb_build_id,
@@ -47,6 +48,12 @@ def main(args):
                         "comment": f"Instance {instance_type} of {args.cloud}"
                     },
                     "waived": True,
+                    "misc": {
+                        "maintainers": [{
+                            "name": "Virt-QE-S1",
+                            "email": "3rd-qe-list@redhat.com",
+                        }],
+                    },
                 }
 
                 common_output_files = [
@@ -65,6 +72,7 @@ def main(args):
                     extra_data = {
                         "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}',
                         "path": "ltp",
+                        "comment": "LTP",
                         # KCIDB status cannot be ABORT
                         "status": "ERROR",
                         "output_files": common_output_files,
@@ -75,11 +83,16 @@ def main(args):
                     result_file_name = f'{instance_type}-{test}.result'
                     result_url = f"{args.build_url}artifact/results/{result_file_name}"
 
+                    days, hours, minutes, seconds = re.match(r'(?:(\d+) day[s]?, )?(\d+):(\d+):(\S+)', duration).groups()
+                    total_seconds = int(days or 0) * 86400 + int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
                     extra_data = {
                         "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}.{test}',
                         "path": f"ltp.{test}",
+                        "comment": f"LTP subset {test}",
                         "log_url": console_url,
                         "status": status,
+                        "duration": total_seconds,
                         "output_files": common_output_files + [
                             {
                                 "name": result_file_name,
