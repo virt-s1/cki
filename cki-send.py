@@ -70,7 +70,7 @@ def main(args):
                 # When LTP_test is reported, means that the tests failed and we won't get subtests.
                 if test == "LTP_test" and status == "ABORT":
                     extra_data = {
-                        "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}',
+                        "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}.{args.test_os}',
                         "path": "ltp",
                         "comment": "LTP",
                         # KCIDB status cannot be ABORT
@@ -87,7 +87,7 @@ def main(args):
                     total_seconds = int(days or 0) * 86400 + int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
                     extra_data = {
-                        "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}.{test}',
+                        "id": f'redhat:virt_qe_s1.{args.build_id}.{instance_type}.{args.test_os}.{test}',
                         "path": f"ltp.{test}",
                         "comment": f"LTP subset {test}",
                         "log_url": console_url,
@@ -121,6 +121,7 @@ if __name__ == '__main__':
     parser.add_argument("--build_url", type=str, required=True, help="Jenkins BUILD URL")
     parser.add_argument("--build_id", type=str, required=True, help="Jenkins BUILD ID")
     parser.add_argument("--cloud", type=str, required=True, help="Cloud platform")
+    parser.add_argument("--test_os", type=str, required=True, help="OS name")
     args = parser.parse_args()
 
     main(args)

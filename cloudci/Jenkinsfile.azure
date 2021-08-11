@@ -454,7 +454,7 @@ pipeline {
 
                     withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
                         sh """
-                            ./cki-send.py --build_url=${env.BUILD_URL} --build_id=${env.BUILD_ID} --cloud=Azure --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY} --kcidb_build_id=${env.KCIDB_BUILD_ID}
+                            ./cki-send.py --build_url=${env.BUILD_URL} --build_id=${env.BUILD_ID} --cloud=Azure --ssl_cert_file=${UMB_SENDING_CERT} --ssl_key_file=${UMB_SENDING_KEY} --kcidb_build_id=${env.KCIDB_BUILD_ID} --test_os=${TEST_OS}
                         """
                     }
                     googlechatnotification message: "${currentBuild.currentResult}\n${env.TEST_OS} ${env.KERNEL_NVR}\n${env.GCN_INFO}\nCloud: Azure\nConsole Log: ${env.BUILD_URL}display/redirect",
