@@ -188,3 +188,5 @@ timer_settime01
 timer_settime02
 chown04
 chown04_16
+time-schedule01
+trace_sched01
