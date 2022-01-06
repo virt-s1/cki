@@ -3,7 +3,7 @@ pipeline {
     environment {
         ARCH = "x86_64"
         GCN_URL = credentials('google-chat-notification-url')
-        VSPHERE_SERVER = "10.73.73.245"
+        VSPHERE_SERVER = "10.73.75.144"
         ESXI_HOST = "10.16.209.80"
         ESXI_DATACENTER = "Datacenter7.0"
         ESXI_DATASTORE = "datastore-80"
