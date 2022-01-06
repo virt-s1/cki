@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'container-fedora-33-prod' }
+    agent { label 'container-fedora-35-prod' }
     environment {
         ARCH = "x86_64"
         GCN_URL = credentials('google-chat-notification-url')
@@ -73,7 +73,7 @@ pipeline {
         stage("testing") {
             parallel {
                 stage("n2d") {
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "n2d-standard-2" }
                     stages {
                         stage("prepare") {
@@ -144,7 +144,7 @@ pipeline {
                     }
                 }
                 stage("n2") {
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "n2-standard-2" }
                     stages {
                         stage("prepare") {
@@ -215,7 +215,7 @@ pipeline {
                     }
                 }
                 stage("n1") {
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "n1-standard-2" }
                     stages {
                         stage("prepare") {
@@ -286,7 +286,7 @@ pipeline {
                     }
                 }
                 stage("e2") {
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "e2-standard-2" }
                     stages {
                         stage("prepare") {
@@ -357,7 +357,7 @@ pipeline {
                     }
                 }
                 stage("c2") {
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "c2-standard-4" }
                     stages {
                         stage("prepare") {

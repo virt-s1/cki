@@ -58,7 +58,7 @@
       when: ltp_results is succeeded
 
     - name: fetch log and result folder back
-      synchronize:
+      ansible.posix.synchronize:
         mode: pull
         src: "/opt/ltp/{{ item }}"
         dest: "{{ playbook_dir }}"

@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'container-fedora-33-prod' }
+    agent { label 'container-fedora-35-prod' }
     environment {
         ARCH = "x86_64"
         GCN_URL = credentials('google-chat-notification-url')
@@ -73,7 +73,7 @@ pipeline {
         stage("testing") {
             parallel {
                 stage("m1.L") {
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "m1.large" }
                     stages {
                         stage("prepare") {
@@ -224,7 +224,7 @@ void prepare() {
 void deploy() {
     checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
     dir("kite-deploy") {
-        withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+        withCredentials([file(credentialsId: 'openstack-clouds-yaml', variable: 'OS_CLIENT_CONFIG_FILE')]) {
             sh "ansible-playbook -v -i inventory -e cloud_platform=openstack deploy.yaml"
         }
     }
@@ -262,7 +262,7 @@ void run_test() {
 // clear esxi instance
 void remove() {
     dir("kite-deploy") {
-        withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+        withCredentials([file(credentialsId: 'openstack-clouds-yaml', variable: 'OS_CLIENT_CONFIG_FILE')]) {
             sh "ansible-playbook -v -i inventory -e cloud_platform=openstack remove.yaml"
         }
     }

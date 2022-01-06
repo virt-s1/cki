@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'container-fedora-33-prod' }
+    agent { label 'container-fedora-35-prod' }
     environment {
         ARCH = "x86_64"
         GCN_URL = credentials('google-chat-notification-url')
@@ -77,7 +77,7 @@ pipeline {
         stage("testing") {
             parallel {
                 stage("ESXi7-BIOS") {
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "bios" }
                     stages {
                         stage("prepare") {
@@ -148,7 +148,7 @@ pipeline {
                     }
                 }
                 stage("ESXi7-UEFI") {
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "efi" }
                     stages {
                         stage("prepare") {

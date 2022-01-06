@@ -65,14 +65,13 @@
           ignore_errors: true
 
         - name: esxi take guest screenshoot
-          vmware_guest_screenshot:
+          community.vmware.vmware_guest_snapshot:
             hostname: "{{ vsphere_server }}"
             username: "{{ vsphere_username }}"
             password: "{{ vsphere_password }}"
             datacenter: "{{ esxi_datacenter }}"
             uuid: "{{ instance }}"
             validate_certs: no
-            uuid: "{{ instance }}"
             local_path: "{{ playbook_dir }}"
           delegate_to: localhost
           when: cloud_platform == "esxi"

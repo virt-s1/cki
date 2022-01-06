@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'container-fedora-33-prod' }
+    agent { label 'container-fedora-35-prod' }
     environment {
         AWS_REGION = "us-east-1"
         GCN_URL = credentials('google-chat-notification-url')
@@ -126,7 +126,7 @@ pipeline {
                             environment name: 'X86_64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment {
                         INSTANCE_TYPE = "t2.medium"
                         ARCH = "x86_64"
@@ -207,7 +207,7 @@ pipeline {
                             environment name: 'X86_64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment {
                         INSTANCE_TYPE = "t3a.medium"
                         ARCH = "x86_64"
@@ -288,7 +288,7 @@ pipeline {
                             environment name: 'X86_64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment {
                         INSTANCE_TYPE = "m4.large"
                         ARCH = "x86_64"
@@ -369,7 +369,7 @@ pipeline {
                             environment name: 'X86_64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment {
                         INSTANCE_TYPE = "m5.large"
                         ARCH = "x86_64"
@@ -450,7 +450,7 @@ pipeline {
                             environment name: 'X86_64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment {
                         INSTANCE_TYPE = "m5dn.large"
                         ARCH = "x86_64"
@@ -531,7 +531,7 @@ pipeline {
                             environment name: 'ARM64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment {
                         INSTANCE_TYPE = "t4g.medium"
                         ARCH = "aarch64"
@@ -612,7 +612,7 @@ pipeline {
                             environment name: 'ARM64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment {
                         INSTANCE_TYPE = "m6gd.large"
                         ARCH = "aarch64"
@@ -693,7 +693,7 @@ pipeline {
                             environment name: 'ARM64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-33-prod" }
+                    agent { label "container-fedora-35-prod" }
                     environment {
                         INSTANCE_TYPE = "a1.large"
                         ARCH = "aarch64"
@@ -911,7 +911,7 @@ void prepare() {
 void deploy() {
     checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kite-deploy']], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/virt-s1/kite-deploy.git']]])
     dir("kite-deploy") {
-        withCredentials([string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY'), string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_KEY')]) {
+        withCredentials([file(credentialsId: 'aws-shared-credentials-file', variable: 'AWS_SHARED_CREDENTIALS_FILE')]) {
             sh "ansible-playbook -v -i inventory -e cloud_platform=aws deploy.yaml"
         }
     }
@@ -949,7 +949,7 @@ void run_test() {
 // clear aws instance
 void remove() {
     dir("kite-deploy") {
-        withCredentials([string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+        withCredentials([file(credentialsId: 'aws-shared-credentials-file', variable: 'AWS_SHARED_CREDENTIALS_FILE')]) {
             sh "ansible-playbook -v -i inventory -e cloud_platform=aws remove.yaml"
         }
     }
