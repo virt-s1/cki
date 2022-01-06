@@ -65,7 +65,7 @@
           ignore_errors: true
 
         - name: esxi take guest screenshoot
-          community.vmware.vmware_guest_snapshot:
+          community.vmware.vmware_guest_screenshot:
             hostname: "{{ vsphere_server }}"
             username: "{{ vsphere_username }}"
             password: "{{ vsphere_password }}"
