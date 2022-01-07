@@ -1,6 +1,7 @@
 ---
 - hosts: guest
   vars:
+    os: "{{ lookup('env', 'TEST_OS') }}"
     gcp_project: "{{ lookup('env', 'GCP_PROJECT') }}"
     aws_region: "{{ lookup('env', 'AWS_REGION') }}"
     aws_profile: "default"
@@ -16,6 +17,20 @@
         dest: "/home/admin"
 
     - block:
+        - name: apply new SELinux file context to /var/lib/rpm
+          command: restorecon -Rv /var/lib/rpm
+          become: yes
+          when:
+            - "'rhel-9' in os"
+            - cloud_platform == "esxi"
+
+        - name: converting database from bdb_ro to sqlite backend
+          command: rpmdb --rebuilddb
+          become: yes
+          when:
+            - "'rhel-9' in os"
+            - cloud_platform == "esxi"
+
         - name: install kernel on guest
           dnf:
             name: "/home/admin/{{ cloud_platform }}-{{ kernel_nvr }}/kernel-{{ kernel_nvr }}.rpm, /home/admin/{{ cloud_platform }}-{{ kernel_nvr }}/kernel-core-{{ kernel_nvr }}.rpm, /home/admin/{{ cloud_platform }}-{{ kernel_nvr }}/kernel-modules-{{ kernel_nvr }}.rpm, /home/admin/{{ cloud_platform }}-{{ kernel_nvr }}/kernel-modules-extra-{{ kernel_nvr }}.rpm"
