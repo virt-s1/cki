@@ -9,8 +9,8 @@ import pathlib
 
 def main(args):
     hosts = [
-        ("messaging-devops-broker01.web.prod.ext.phx2.redhat.com", 61612),
-        ("messaging-devops-broker02.web.prod.ext.phx2.redhat.com", 61612)
+        ("umb-broker03.api.redhat.com", 61616),
+        ("umb-broker04.api.redhat.com", 61616)
     ]
     conn = stomp.StompConnection12(host_and_ports=hosts,
                                    use_ssl=True,
