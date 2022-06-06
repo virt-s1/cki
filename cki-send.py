@@ -8,14 +8,9 @@ import pathlib
 
 
 def main(args):
-    hosts = [
-        ("umb-broker03.api.redhat.com", 61616),
-        ("umb-broker04.api.redhat.com", 61616)
-    ]
-    conn = stomp.StompConnection12(host_and_ports=hosts,
-                                   use_ssl=True,
-                                   ssl_key_file=args.ssl_key_file,
-                                   ssl_cert_file=args.ssl_cert_file)
+    hosts = [("umb.api.redhat.com", 61612)]
+    conn = stomp.Connection(hosts)
+    conn.set_ssl(for_hosts=hosts, key_file=args.ssl_key_file, cert_file=args.ssl_cert_file)
     conn.connect(wait=True)
 
     running_path = pathlib.Path.cwd()
