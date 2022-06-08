@@ -288,148 +288,6 @@ pipeline {
                         }
                     }
                 }
-                stage("L8sV2") {
-                    agent { label "container-fedora-35-prod" }
-                    environment { INSTANCE_TYPE = "Standard_L8s_v2" }
-                    stages {
-                        stage("prepare") {
-                            steps {
-                                prepare()
-                            }
-                        }
-                        stage("deploy") {
-                            steps {
-                                deploy()
-                            }
-                            post {
-                                failure {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("setup") {
-                            steps {
-                                setup()
-                            }
-                            post {
-                                failure {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("install") {
-                            steps {
-                                install()
-                            }
-                            post {
-                                always {
-                                    preserve_logs("console")
-                                }
-                                failure {
-                                    set_abort('install')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('install')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("testing") {
-                            steps {
-                                run_test()
-                            }
-                            post {
-                                always {
-                                    set_test_result()
-                                    preserve_logs("result")
-                                    remove()
-                                }
-                            }
-                        }
-                    }
-                }
-                stage("NC6") {
-                    agent { label "container-fedora-35-prod" }
-                    environment { INSTANCE_TYPE = "Standard_NC6" }
-                    stages {
-                        stage("prepare") {
-                            steps {
-                                prepare()
-                            }
-                        }
-                        stage("deploy") {
-                            steps {
-                                deploy()
-                            }
-                            post {
-                                failure {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("setup") {
-                            steps {
-                                setup()
-                            }
-                            post {
-                                failure {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("install") {
-                            steps {
-                                install()
-                            }
-                            post {
-                                always {
-                                    preserve_logs("console")
-                                }
-                                failure {
-                                    set_abort('install')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('install')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("testing") {
-                            steps {
-                                run_test()
-                            }
-                            post {
-                                always {
-                                    set_test_result()
-                                    preserve_logs("result")
-                                    remove()
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     }
@@ -444,13 +302,9 @@ pipeline {
                     unstash 'Standard_B2s-result'
                     unstash 'Standard_D4as_v4-result'
                     unstash 'Standard_F4s_v2-result'
-                    unstash 'Standard_L8s_v2-result'
-                    unstash 'Standard_NC6-result'
                     unstash 'Standard_B2s-report'
                     unstash 'Standard_D4as_v4-report'
                     unstash 'Standard_F4s_v2-report'
-                    unstash 'Standard_L8s_v2-report'
-                    unstash 'Standard_NC6-report'
 
                     withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
                         sh """

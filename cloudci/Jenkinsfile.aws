@@ -361,249 +361,6 @@ pipeline {
                         }
                     }
                 }
-                stage("m5.L") {
-                    when {
-                        beforeAgent true
-                        anyOf {
-                            environment name: 'BUILD_TYPE', value: 'master'
-                            environment name: 'X86_64_PATCH', value: 'true'
-                        }
-                    }
-                    agent { label "container-fedora-35-prod" }
-                    environment {
-                        INSTANCE_TYPE = "m5.large"
-                        ARCH = "x86_64"
-                    }
-                    stages {
-                        stage("prepare") {
-                            steps {
-                                prepare()
-                            }
-                        }
-                        stage("deploy") {
-                            steps {
-                                deploy()
-                            }
-                            post {
-                                failure {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("setup") {
-                            steps {
-                                setup()
-                            }
-                            post {
-                                failure {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("install") {
-                            steps {
-                                install("${env.X86_64_KERNEL_NVR}")
-                            }
-                            post {
-                                always {
-                                    preserve_logs("console")
-                                }
-                                failure {
-                                    set_abort('install')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('install')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("testing") {
-                            steps {
-                                run_test()
-                            }
-                            post {
-                                always {
-                                    set_test_result()
-                                    preserve_logs("result")
-                                    remove()
-                                }
-                            }
-                        }
-                    }
-                }
-                stage("m5dn.L") {
-                    when {
-                        beforeAgent true
-                        anyOf {
-                            environment name: 'BUILD_TYPE', value: 'master'
-                            environment name: 'X86_64_PATCH', value: 'true'
-                        }
-                    }
-                    agent { label "container-fedora-35-prod" }
-                    environment {
-                        INSTANCE_TYPE = "m5dn.large"
-                        ARCH = "x86_64"
-                    }
-                    stages {
-                        stage("prepare") {
-                            steps {
-                                prepare()
-                            }
-                        }
-                        stage("deploy") {
-                            steps {
-                                deploy()
-                            }
-                            post {
-                                failure {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("setup") {
-                            steps {
-                                setup()
-                            }
-                            post {
-                                failure {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("install") {
-                            steps {
-                                install("${env.X86_64_KERNEL_NVR}")
-                            }
-                            post {
-                                always {
-                                    preserve_logs("console")
-                                }
-                                failure {
-                                    set_abort('install')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('install')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("testing") {
-                            steps {
-                                run_test()
-                            }
-                            post {
-                                always {
-                                    set_test_result()
-                                    preserve_logs("result")
-                                    remove()
-                                }
-                            }
-                        }
-                    }
-                }
-                stage("t4g.M") {
-                    when {
-                        beforeAgent true
-                        anyOf {
-                            environment name: 'BUILD_TYPE', value: 'master'
-                            environment name: 'ARM64_PATCH', value: 'true'
-                        }
-                    }
-                    agent { label "container-fedora-35-prod" }
-                    environment {
-                        INSTANCE_TYPE = "t4g.medium"
-                        ARCH = "aarch64"
-                    }
-                    stages {
-                        stage("prepare") {
-                            steps {
-                                prepare()
-                            }
-                        }
-                        stage("deploy") {
-                            steps {
-                                deploy()
-                            }
-                            post {
-                                failure {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("setup") {
-                            steps {
-                                setup()
-                            }
-                            post {
-                                failure {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("install") {
-                            steps {
-                                install("${env.ARM64_KERNEL_NVR}")
-                            }
-                            post {
-                                always {
-                                    preserve_logs("console")
-                                }
-                                failure {
-                                    set_abort('install')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('install')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("testing") {
-                            steps {
-                                run_test()
-                            }
-                            post {
-                                always {
-                                    set_test_result()
-                                    preserve_logs("result")
-                                    remove()
-                                }
-                            }
-                        }
-                    }
-                }
                 stage("m6gd.L") {
                     when {
                         beforeAgent true
@@ -782,17 +539,11 @@ pipeline {
                         unstash 't2.medium-result'
                         unstash 't3a.medium-result'
                         unstash 'm4.large-result'
-                        unstash 'm5.large-result'
-                        unstash 'm5dn.large-result'
-                        unstash 't4g.medium-result'
                         unstash 'm6gd.large-result'
                         unstash 'a1.large-result'
                         unstash 't2.medium-report'
                         unstash 't3a.medium-report'
                         unstash 'm4.large-report'
-                        unstash 'm5.large-report'
-                        unstash 'm5dn.large-report'
-                        unstash 't4g.medium-report'
                         unstash 'm6gd.large-report'
                         unstash 'a1.large-report'
                     } else if (env.X86_64_PATCH == "true" && env.ARM64_PATCH == "true") {
@@ -802,17 +553,11 @@ pipeline {
                         unstash 't2.medium-result'
                         unstash 't3a.medium-result'
                         unstash 'm4.large-result'
-                        unstash 'm5.large-result'
-                        unstash 'm5dn.large-result'
-                        unstash 't4g.medium-result'
                         unstash 'm6gd.large-result'
                         unstash 'a1.large-result'
                         unstash 't2.medium-report'
                         unstash 't3a.medium-report'
                         unstash 'm4.large-report'
-                        unstash 'm5.large-report'
-                        unstash 'm5dn.large-report'
-                        unstash 't4g.medium-report'
                         unstash 'm6gd.large-report'
                         unstash 'a1.large-report'
                     } else if (env.X86_64_PATCH == "true") {
@@ -821,20 +566,14 @@ pipeline {
                         unstash 't2.medium-result'
                         unstash 't3a.medium-result'
                         unstash 'm4.large-result'
-                        unstash 'm5.large-result'
-                        unstash 'm5dn.large-result'
                         unstash 't2.medium-report'
                         unstash 't3a.medium-report'
                         unstash 'm4.large-report'
-                        unstash 'm5.large-report'
-                        unstash 'm5dn.large-report'
                     } else if (env.ARM64_PATCH == "true") {
                         // clear kernel
                         sh "rm -rf \$HOME/downloads/aws-${env.ARM64_KERNEL_NVR}"
-                        unstash 't4g.medium-result'
                         unstash 'm6gd.large-result'
                         unstash 'a1.large-result'
-                        unstash 't4g.medium-report'
                         unstash 'm6gd.large-report'
                         unstash 'a1.large-report'
                     }

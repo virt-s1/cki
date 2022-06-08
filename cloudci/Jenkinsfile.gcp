@@ -214,151 +214,9 @@ pipeline {
                         }
                     }
                 }
-                stage("n1") {
-                    agent { label "container-fedora-35-prod" }
-                    environment { INSTANCE_TYPE = "n1-standard-2" }
-                    stages {
-                        stage("prepare") {
-                            steps {
-                                prepare()
-                            }
-                        }
-                        stage("deploy") {
-                            steps {
-                                deploy()
-                            }
-                            post {
-                                failure {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("setup") {
-                            steps {
-                                setup()
-                            }
-                            post {
-                                failure {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("install") {
-                            steps {
-                                install()
-                            }
-                            post {
-                                always {
-                                    preserve_logs("console")
-                                }
-                                failure {
-                                    set_abort('install')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('install')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("testing") {
-                            steps {
-                                run_test()
-                            }
-                            post {
-                                always {
-                                    set_test_result()
-                                    preserve_logs("result")
-                                    remove()
-                                }
-                            }
-                        }
-                    }
-                }
                 stage("e2") {
                     agent { label "container-fedora-35-prod" }
                     environment { INSTANCE_TYPE = "e2-standard-2" }
-                    stages {
-                        stage("prepare") {
-                            steps {
-                                prepare()
-                            }
-                        }
-                        stage("deploy") {
-                            steps {
-                                deploy()
-                            }
-                            post {
-                                failure {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('deploy')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("setup") {
-                            steps {
-                                setup()
-                            }
-                            post {
-                                failure {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('setup')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("install") {
-                            steps {
-                                install()
-                            }
-                            post {
-                                always {
-                                    preserve_logs("console")
-                                }
-                                failure {
-                                    set_abort('install')
-                                    remove()
-                                }
-                                aborted {
-                                    set_abort('install')
-                                    remove()
-                                }
-                            }
-                        }
-                        stage("testing") {
-                            steps {
-                                run_test()
-                            }
-                            post {
-                                always {
-                                    set_test_result()
-                                    preserve_logs("result")
-                                    remove()
-                                }
-                            }
-                        }
-                    }
-                }
-                stage("c2") {
-                    agent { label "container-fedora-35-prod" }
-                    environment { INSTANCE_TYPE = "c2-standard-4" }
                     stages {
                         stage("prepare") {
                             steps {
@@ -440,14 +298,10 @@ pipeline {
                     // let's aggregate result
                     unstash 'n2d-standard-2-result'
                     unstash 'n2-standard-2-result'
-                    unstash 'n1-standard-2-result'
                     unstash 'e2-standard-2-result'
-                    unstash 'c2-standard-4-result'
                     unstash 'n2d-standard-2-report'
                     unstash 'n2-standard-2-report'
-                    unstash 'n1-standard-2-report'
                     unstash 'e2-standard-2-report'
-                    unstash 'c2-standard-4-report'
 
                     withCredentials([file(credentialsId: 'umb-sending-cert', variable: 'UMB_SENDING_CERT'), file(credentialsId: 'umb-sending-key', variable: 'UMB_SENDING_KEY')]) {
                         sh """
