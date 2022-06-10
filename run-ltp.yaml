@@ -29,7 +29,7 @@
         - connectors
         - crypto
         - dio
-        - fs
+        - fcntl-locktests
         - fs_bind
         - fs_perms_simple
         - fsx
