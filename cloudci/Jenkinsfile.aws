@@ -46,9 +46,9 @@ pipeline {
                     println env.ARM64_PATCH
                     println env.X86_64_PATCH
 
-                    if (env.BUILD_TYPE == "master" || env.ARM64_PATCH || env.X86_64_PATCH) {
+                    if (env.BUILD_TYPE == "master" || env.ARM64_PATCH == "true" || env.X86_64_PATCH == "true") {
                         object.build_info.each {
-                            if (it.architecture == 'x86_64') {
+                            if (it.architecture == 'x86_64' && it.debug_kernel == false) {
                                 env.X86_64_KERNEL_URL = it.kernel_package_url
                                 env.X86_64_KERNEL_NVR = it.kernel_package_url.split('/')[-1]
                                 env.KCIDB_BUILD_ID = it.build_id
@@ -65,8 +65,8 @@ pipeline {
 
                         if (env.BUILD_TYPE == "master") {
                             env.KERNEL_NVR = env.X86_64_KERNEL_NVR.replace('.x86_64', '')
-
                             env.GCN_INFO = "Master"
+                            currentBuild.displayName = "${env.BUILD_NUMBER}-${env.BUILD_TYPE}-${env.KERNEL_NVR}"
                         } else {
                             if (env.ARM64_PATCH == "true" && env.X86_64_PATCH == "true") {
                                 env.KERNEL_NVR = env.X86_64_KERNEL_NVR.replace('.x86_64', '')
@@ -75,12 +75,11 @@ pipeline {
                             } else {
                                     env.KERNEL_NVR = env.ARM64_KERNEL_NVR
                             }
-
                             env.GCN_INFO = "Merge Request: ${env.MR_URL}"
+                            currentBuild.displayName = "${env.BUILD_NUMBER}-${env.BUILD_TYPE}-${env.KERNEL_NVR}-MR-${env.MR_NUM}"
                         }
                         println env.GCN_INFO
                         println env.KERNEL_NVR
-                        currentBuild.displayName = "${env.BUILD_NUMBER}-${env.BUILD_TYPE}-${env.KERNEL_NVR}"
 
                         sh "printenv"
                     } else {

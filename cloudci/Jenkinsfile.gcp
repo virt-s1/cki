@@ -20,7 +20,7 @@ pipeline {
                     if (object.modified_files != []) {
                         buildType = "patch"
                         object.modified_files.each {
-                            if (it.indexOf("arch/powerpc") == 0 || it.indexOf("arch/s390") == 0 || it.indexOf("arch/arm64") == 0 || it.indexOf("arch/openrisc") == 0){
+                            if (it.indexOf("arch/powerpc") == 0 || it.indexOf("arch/s390") == 0 || it.indexOf("arch/arm64") == 0 || it.indexOf("arch/openrisc") == 0 || it.indexOf("arch/h8300") == 0 || it.indexOf("arch/microblaze") == 0){
                                 non_x86_64_patch++
                             }
                         }
@@ -34,7 +34,7 @@ pipeline {
 
                     if (buildType == "master" || object.modified_files.size() != non_x86_64_patch) {
                         object.build_info.each {
-                            if (it.architecture == 'x86_64') {
+                            if (it.architecture == 'x86_64' && it.debug_kernel == false) {
                                 env.KERNEL_URL = it.kernel_package_url
                                 env.KCIDB_BUILD_ID = it.build_id
                             }
