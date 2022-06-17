@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'container-fedora-35-prod' }
+    agent { label 'container-fedora-36-prod' }
     environment {
         ARCH = "x86_64"
         GCN_URL = credentials('google-chat-notification-url')
@@ -73,7 +73,7 @@ pipeline {
         stage("testing") {
             parallel {
                 stage("n2d") {
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment { INSTANCE_TYPE = "n2d-standard-2" }
                     stages {
                         stage("prepare") {
@@ -144,7 +144,7 @@ pipeline {
                     }
                 }
                 stage("n2") {
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment { INSTANCE_TYPE = "n2-standard-2" }
                     stages {
                         stage("prepare") {
@@ -215,7 +215,7 @@ pipeline {
                     }
                 }
                 stage("e2") {
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment { INSTANCE_TYPE = "e2-standard-2" }
                     stages {
                         stage("prepare") {

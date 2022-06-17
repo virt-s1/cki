@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'container-fedora-35-prod' }
+    agent { label 'container-fedora-36-prod' }
     environment {
         AWS_REGION = "us-east-1"
         GCN_URL = credentials('google-chat-notification-url')
@@ -125,7 +125,7 @@ pipeline {
                             environment name: 'X86_64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment {
                         INSTANCE_TYPE = "t2.medium"
                         ARCH = "x86_64"
@@ -206,7 +206,7 @@ pipeline {
                             environment name: 'X86_64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment {
                         INSTANCE_TYPE = "t3a.medium"
                         ARCH = "x86_64"
@@ -287,7 +287,7 @@ pipeline {
                             environment name: 'X86_64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment {
                         INSTANCE_TYPE = "m4.large"
                         ARCH = "x86_64"
@@ -368,7 +368,7 @@ pipeline {
                             environment name: 'ARM64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment {
                         INSTANCE_TYPE = "m6gd.large"
                         ARCH = "aarch64"
@@ -449,7 +449,7 @@ pipeline {
                             environment name: 'ARM64_PATCH', value: 'true'
                         }
                     }
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment {
                         INSTANCE_TYPE = "a1.large"
                         ARCH = "aarch64"

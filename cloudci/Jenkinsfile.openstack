@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'container-fedora-35-prod' }
+    agent { label 'container-fedora-36-prod' }
     environment {
         ARCH = "x86_64"
         GCN_URL = credentials('google-chat-notification-url')
@@ -73,7 +73,7 @@ pipeline {
         stage("testing") {
             parallel {
                 stage("m1.L") {
-                    agent { label "container-fedora-35-prod" }
+                    agent { label "container-fedora-36-prod" }
                     environment { INSTANCE_TYPE = "m1.large" }
                     stages {
                         stage("prepare") {
