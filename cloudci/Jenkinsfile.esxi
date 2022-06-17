@@ -346,7 +346,7 @@ void run_test() {
 // clear esxi instance
 void remove() {
     dir("kite-deploy") {
-        withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME'), string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASSWORD')]) {
+        withCredentials([usernamePassword(credentialsId: 'vsphere-service-account', passwordVariable: 'VSPHERE_PASSWORD', usernameVariable: 'VSPHERE_USERNAME')]) {
             sh "ansible-playbook -v -i inventory -e cloud_platform=esxi remove.yaml"
         }
     }
